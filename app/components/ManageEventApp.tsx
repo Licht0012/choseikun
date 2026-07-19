@@ -30,7 +30,6 @@ export function ManageEventApp({ token }: ManageEventAppProps) {
   const [memo, setMemo] = useState("");
   const [deadlineDate, setDeadlineDate] = useState("");
   const [reminderEnabled, setReminderEnabled] = useState(true);
-  const [newAccessCode, setNewAccessCode] = useState("");
   const [lineCode, setLineCode] = useState<LineCodeData | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -63,13 +62,12 @@ export function ManageEventApp({ token }: ManageEventAppProps) {
     const response = await fetch(`/api/manage/${encodeURIComponent(token)}`, {
       method: "PUT",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name, memo, deadlineDate, reminderEnabled, accessCode: newAccessCode || undefined }),
+      body: JSON.stringify({ name, memo, deadlineDate, reminderEnabled }),
     });
     const data = (await response.json()) as { error?: string; event?: PublicEventView };
     setSaving(false);
     if (!response.ok) return setError(data.error || "保存できませんでした。");
     if (data.event) setEvent(data.event);
-    setNewAccessCode("");
     setNotice("変更を保存しました。");
   };
 
@@ -115,17 +113,15 @@ export function ManageEventApp({ token }: ManageEventAppProps) {
               <input type="checkbox" checked={reminderEnabled} onChange={(formEvent) => setReminderEnabled(formEvent.target.checked)} />
               <i aria-hidden="true" />
             </label>
-            <label className="field-label" htmlFor="new-access-code">合言葉を変更（任意）</label>
-            <input id="new-access-code" type="password" value={newAccessCode} onChange={(formEvent) => setNewAccessCode(formEvent.target.value)} minLength={4} placeholder="変更するときだけ入力" />
             {error && <p className="form-error" role="alert">{error}</p>}
             <button className="button button--primary button--wide" type="submit" disabled={saving}>{saving ? "保存中…" : "変更を保存"}</button>
           </form>
 
           <div className="manage-side">
             <section className="manage-panel">
-              <div className="section-title"><h2>参加者へ共有</h2><p>URLと合言葉をLINEグループへ送ってください</p></div>
+              <div className="section-title"><h2>参加者へ共有</h2><p>回答用URLをLINEグループへ送ってください</p></div>
               <div className="share-block"><label>参加者用URL</label><div><code>{management.shareUrl}</code><button type="button" onClick={() => copy(management.shareUrl, "参加者用URLをコピーしました。")}>コピー</button></div></div>
-              <p className="security-note">合言葉は作成時に設定したものです。忘れた場合は左のフォームから変更できます。</p>
+              <p className="security-note">管理画面のURLは主催者専用です。参加者には回答用URLだけを共有してください。</p>
             </section>
 
             <section className="manage-panel line-connect-panel">

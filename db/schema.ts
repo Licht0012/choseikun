@@ -8,7 +8,6 @@ export const events = sqliteTable(
     name: text("name").notNull(),
     memo: text("memo").notNull().default(""),
     deadlineDate: text("deadline_date").notNull(),
-    accessCodeHash: text("access_code_hash").notNull(),
     adminTokenHash: text("admin_token_hash").notNull(),
     lineGroupId: text("line_group_id"),
     lineGroupName: text("line_group_name"),

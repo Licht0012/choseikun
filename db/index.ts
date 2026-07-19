@@ -18,7 +18,6 @@ const schemaStatements = [
     name TEXT NOT NULL,
     memo TEXT NOT NULL DEFAULT '',
     deadline_date TEXT NOT NULL,
-    access_code_hash TEXT NOT NULL,
     admin_token_hash TEXT NOT NULL UNIQUE,
     line_group_id TEXT,
     line_group_name TEXT,

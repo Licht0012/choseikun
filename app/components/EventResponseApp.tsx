@@ -42,9 +42,8 @@ function groupSlots(slots: SlotView[]): Array<{ date: string; slots: SlotView[] 
 }
 
 export function EventResponseApp({ slug }: EventResponseAppProps) {
-  const [state, setState] = useState<"loading" | "locked" | "ready" | "missing">("loading");
+  const [state, setState] = useState<"loading" | "ready" | "missing">("loading");
   const [event, setEvent] = useState<PublicEventView | null>(null);
-  const [accessCode, setAccessCode] = useState("");
   const [name, setName] = useState("");
   const [comment, setComment] = useState("");
   const [answers, setAnswers] = useState<Record<string, AvailabilityStatus>>({});
@@ -57,7 +56,6 @@ export function EventResponseApp({ slug }: EventResponseAppProps) {
 
   const loadEvent = async () => {
     const response = await fetch(`/api/events/${encodeURIComponent(slug)}`, { cache: "no-store" });
-    if (response.status === 401) return setState("locked");
     if (response.status === 404) return setState("missing");
     const data = (await response.json()) as { event?: PublicEventView };
     if (!response.ok || !data.event) return setState("missing");
@@ -70,21 +68,6 @@ export function EventResponseApp({ slug }: EventResponseAppProps) {
     loadEvent();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug]);
-
-  const unlock = async (formEvent: FormEvent) => {
-    formEvent.preventDefault();
-    setError("");
-    const response = await fetch(`/api/events/${encodeURIComponent(slug)}`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ accessCode }),
-    });
-    const data = (await response.json()) as { event?: PublicEventView; error?: string };
-    if (!response.ok || !data.event) return setError(data.error || "イベントを開けませんでした。");
-    setEvent(data.event);
-    setPriorAvailable(Boolean(localStorage.getItem(editTokenKey)));
-    setState("ready");
-  };
 
   const groupedSlots = useMemo(() => groupSlots(event?.slots || []), [event]);
   const counts = useMemo(() => {
@@ -154,12 +137,6 @@ export function EventResponseApp({ slug }: EventResponseAppProps) {
   if (state === "missing") {
     return (
       <><BrandHeader compact /><main className="shell shell--auth"><section className="auth-panel"><h1>イベントが見つかりません</h1><p>URLが正しいか、主催者に確認してください。</p><a className="button button--primary" href="/">ホームへ戻る</a></section></main></>
-    );
-  }
-
-  if (state === "locked") {
-    return (
-      <><BrandHeader compact /><main className="shell shell--auth"><section className="auth-panel"><div className="auth-mark" aria-hidden="true">調</div><h1>イベントを開く</h1><p>主催者から共有された合言葉を入力してください。</p><form onSubmit={unlock}><label className="field-label" htmlFor="event-access-code">参加者用の合言葉</label><input id="event-access-code" type="password" value={accessCode} onChange={(formEvent) => setAccessCode(formEvent.target.value)} autoComplete="current-password" required />{error && <p className="form-error" role="alert">{error}</p>}<button className="button button--primary button--wide" type="submit">イベントを開く</button></form></section></main></>
     );
   }
 

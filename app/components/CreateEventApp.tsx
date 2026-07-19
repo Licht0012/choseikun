@@ -17,7 +17,6 @@ interface CreatedEvent {
   slug: string;
   shareUrl: string;
   manageUrl: string;
-  accessCode: string;
 }
 
 interface DraftState {
@@ -27,7 +26,6 @@ interface DraftState {
   selectedFixed: string[];
   customRanges: TimeOptionInput[];
   deadlineDate: string;
-  accessCode: string;
   reminderEnabled: boolean;
 }
 
@@ -46,8 +44,6 @@ export function CreateEventApp() {
   const [customEnd, setCustomEnd] = useState("17:30");
   const [customRanges, setCustomRanges] = useState<TimeOptionInput[]>([]);
   const [deadlineDate, setDeadlineDate] = useState("");
-  const [accessCode, setAccessCode] = useState("");
-  const [showAccessCode, setShowAccessCode] = useState(false);
   const [reminderEnabled, setReminderEnabled] = useState(true);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -109,7 +105,7 @@ export function CreateEventApp() {
   };
 
   const saveDraft = () => {
-    const draft: DraftState = { name, memo, dates, selectedFixed, customRanges, deadlineDate, accessCode, reminderEnabled };
+    const draft: DraftState = { name, memo, dates, selectedFixed, customRanges, deadlineDate, reminderEnabled };
     localStorage.setItem("choseikun-event-draft", JSON.stringify(draft));
     setNotice("下書きをこの端末に保存しました。");
     window.setTimeout(() => setNotice(""), 3000);
@@ -126,7 +122,6 @@ export function CreateEventApp() {
       setSelectedFixed(Array.isArray(draft.selectedFixed) ? draft.selectedFixed : fixedRanges.map(rangeKey));
       setCustomRanges(Array.isArray(draft.customRanges) ? draft.customRanges : []);
       setDeadlineDate(draft.deadlineDate || "");
-      setAccessCode(draft.accessCode || "");
       setReminderEnabled(draft.reminderEnabled !== false);
       setNotice("下書きを読み込みました。");
     } catch {
@@ -150,7 +145,6 @@ export function CreateEventApp() {
       dates,
       timeOptions: selectedTimeOptions,
       deadlineDate,
-      accessCode,
       reminderEnabled,
     };
     setSubmitting(true);
@@ -214,14 +208,10 @@ export function CreateEventApp() {
           <section className="success-panel">
             <span className="success-check" aria-hidden="true">✓</span>
             <h1>イベントを作成しました</h1>
-            <p>参加者にはURLと合言葉を一緒に送ってください。</p>
+            <p>参加者には回答用URLを送ってください。</p>
             <div className="share-block">
               <label>参加者用URL</label>
               <div><code>{created.shareUrl}</code><button type="button" onClick={() => copyText(created.shareUrl, "参加者用URLをコピーしました。")}>コピー</button></div>
-            </div>
-            <div className="share-block">
-              <label>参加者用の合言葉</label>
-              <div><code>{created.accessCode}</code><button type="button" onClick={() => copyText(created.accessCode, "合言葉をコピーしました。")}>コピー</button></div>
             </div>
             <div className="success-actions">
               <a className="button button--primary" href={created.manageUrl}>管理画面でLINEを連携</a>
@@ -313,13 +303,6 @@ export function CreateEventApp() {
               <input type="checkbox" checked={reminderEnabled} onChange={(event) => setReminderEnabled(event.target.checked)} />
               <i aria-hidden="true" />
             </label>
-
-            <label className="field-label" htmlFor="access-code">参加者用の合言葉</label>
-            <div className="password-input">
-              <input id="access-code" type={showAccessCode ? "text" : "password"} value={accessCode} onChange={(event) => setAccessCode(event.target.value)} maxLength={64} placeholder="4文字以上" autoComplete="new-password" required />
-              <button type="button" onClick={() => setShowAccessCode((current) => !current)}>{showAccessCode ? "隠す" : "表示"}</button>
-            </div>
-            <p className="field-help">参加者がイベントを開くときに必要になります</p>
           </section>
 
           {error && <p className="form-error form-error--wide" role="alert">{error}</p>}

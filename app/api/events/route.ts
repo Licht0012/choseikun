@@ -21,18 +21,15 @@ export async function POST(request: Request) {
   const slug = createSlug();
   const adminToken = randomToken(32);
   const now = new Date().toISOString();
-  const [accessCodeHash, adminTokenHash] = await Promise.all([
-    digestSecret(input.accessCode),
-    digestSecret(adminToken),
-  ]);
+  const adminTokenHash = await digestSecret(adminToken);
 
   const statements: D1PreparedStatement[] = [
     db
       .prepare(
         `INSERT INTO events (
-          id, slug, name, memo, deadline_date, access_code_hash, admin_token_hash,
+          id, slug, name, memo, deadline_date, admin_token_hash,
           reminder_enabled, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .bind(
         eventId,
@@ -40,7 +37,6 @@ export async function POST(request: Request) {
         input.name,
         input.memo || "",
         input.deadlineDate,
-        accessCodeHash,
         adminTokenHash,
         input.reminderEnabled === false ? 0 : 1,
         now,
@@ -103,7 +99,6 @@ export async function POST(request: Request) {
         slug,
         shareUrl: `${baseUrl}/e/${slug}`,
         manageUrl: `${baseUrl}/manage/${adminToken}`,
-        accessCode: input.accessCode,
       },
     },
     201,

@@ -16,7 +16,6 @@ export function validateCreateEvent(input: CreateEventInput | null): { value?: C
   if (!input) return { error: "入力内容を確認してください。" };
   const name = cleanText(input.name, 100);
   const memo = cleanText(input.memo, 500);
-  const accessCode = cleanText(input.accessCode, 64);
   const deadlineDate = cleanText(input.deadlineDate, 10);
   const dates = Array.from(new Set(Array.isArray(input.dates) ? input.dates.filter((date) => datePattern.test(date)) : [])).sort();
   const timeOptions = Array.isArray(input.timeOptions)
@@ -36,13 +35,10 @@ export function validateCreateEvent(input: CreateEventInput | null): { value?: C
   const today = toDateKey(new Date());
   if (deadlineDate < today) return { error: "入力期限日は今日以降にしてください。" };
   if (parseDateKey(deadlineDate) > parseDateKey(dates[0])) return { error: "入力期限日は最初の候補日以前にしてください。" };
-  if (accessCode.length < 4) return { error: "参加者用の合言葉は4文字以上にしてください。" };
-
   return {
     value: {
       name,
       memo,
-      accessCode,
       deadlineDate,
       dates,
       timeOptions: uniqueTimeOptions,

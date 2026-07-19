@@ -11,7 +11,6 @@ export interface CreateEventInput {
   dates: string[];
   timeOptions: TimeOptionInput[];
   deadlineDate: string;
-  accessCode: string;
   reminderEnabled?: boolean;
 }
 

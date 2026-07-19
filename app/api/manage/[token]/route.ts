@@ -1,7 +1,6 @@
 import { getDb } from "@/db";
 import { buildPublicEvent, findEventByAdminToken } from "@/lib/event-data";
 import { absoluteBaseUrl, jsonResponse, readJson } from "@/lib/http";
-import { digestSecret } from "@/lib/security";
 import { cleanText } from "@/lib/validation";
 
 interface UpdateInput {
@@ -9,7 +8,6 @@ interface UpdateInput {
   memo?: string;
   deadlineDate?: string;
   reminderEnabled?: boolean;
-  accessCode?: string;
 }
 
 export async function GET(request: Request, context: { params: Promise<{ token: string }> }) {
@@ -59,13 +57,6 @@ export async function PUT(request: Request, context: { params: Promise<{ token: 
         event.id,
       ),
   ];
-  const accessCode = cleanText(body.accessCode, 64);
-  if (accessCode) {
-    if (accessCode.length < 4) return jsonResponse({ error: "合言葉は4文字以上にしてください。" }, 400);
-    statements.push(
-      db.prepare("UPDATE events SET access_code_hash = ? WHERE id = ?").bind(await digestSecret(accessCode), event.id),
-    );
-  }
   await db.batch(statements);
   const updated = await findEventByAdminToken(token);
   return jsonResponse({ event: updated ? await buildPublicEvent(updated) : null, saved: true });

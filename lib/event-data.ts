@@ -1,5 +1,5 @@
 import { getDb } from "@/db";
-import { digestSecret, eventCookieName, readCookie, verifySignedToken } from "@/lib/security";
+import { digestSecret } from "@/lib/security";
 import type { AvailabilityStatus, PublicEventView, ResponseView, SlotView } from "@/lib/types";
 import { isResponseOpen } from "@/lib/validation";
 
@@ -9,7 +9,6 @@ export interface EventRecord {
   name: string;
   memo: string;
   deadline_date: string;
-  access_code_hash: string;
   admin_token_hash: string;
   line_group_id: string | null;
   line_group_name: string | null;
@@ -35,10 +34,6 @@ export async function findEventByAdminToken(token: string): Promise<EventRecord 
     (await db.prepare("SELECT * FROM events WHERE admin_token_hash = ? LIMIT 1").bind(tokenHash).first<EventRecord>()) ||
     null
   );
-}
-
-export async function hasEventAccess(request: Request, event: EventRecord): Promise<boolean> {
-  return verifySignedToken(readCookie(request, eventCookieName(event.slug)), `event:${event.id}`);
 }
 
 export async function buildPublicEvent(event: EventRecord): Promise<PublicEventView> {

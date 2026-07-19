@@ -1,5 +1,5 @@
 import { getDb } from "@/db";
-import { buildPublicEvent, findEventBySlug, hasEventAccess } from "@/lib/event-data";
+import { buildPublicEvent, findEventBySlug } from "@/lib/event-data";
 import { jsonResponse, readJson } from "@/lib/http";
 import { constantTimeEqual, digestSecret, randomToken } from "@/lib/security";
 import type { AvailabilityStatus } from "@/lib/types";
@@ -18,7 +18,6 @@ export async function GET(request: Request, context: { params: Promise<{ slug: s
   const { slug } = await context.params;
   const event = await findEventBySlug(slug);
   if (!event) return jsonResponse({ error: "イベントが見つかりません。" }, 404);
-  if (!(await hasEventAccess(request, event))) return jsonResponse({ error: "合言葉を入力してください。" }, 401);
   const editToken = request.headers.get("x-edit-token") || "";
   if (!editToken) return jsonResponse({ response: null });
   const editTokenHash = await digestSecret(editToken);
@@ -45,7 +44,6 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
   const { slug } = await context.params;
   const event = await findEventBySlug(slug);
   if (!event) return jsonResponse({ error: "イベントが見つかりません。" }, 404);
-  if (!(await hasEventAccess(request, event))) return jsonResponse({ error: "合言葉を入力してください。" }, 401);
   if (!isResponseOpen(event.deadline_date)) return jsonResponse({ error: "回答期限を過ぎています。" }, 409);
 
   const body = await readJson<ResponseInput>(request);

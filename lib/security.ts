@@ -104,7 +104,3 @@ export function clearCookie(name: string): string {
 export async function isAdminRequest(request: Request): Promise<boolean> {
   return verifySignedToken(readCookie(request, "choseikun_admin"), "admin");
 }
-
-export function eventCookieName(slug: string): string {
-  return `choseikun_event_${slug.replace(/[^a-zA-Z0-9_-]/g, "")}`;
-}
