@@ -28,6 +28,26 @@ test("公開トップと作成完了画面にLINE連携の使い方が案内さ�
   }
 });
 
+test("共有用の使い方スライドに主要な操作とリマインド仕様が含まれる", async () => {
+  const [page, slides, css] = await Promise.all([
+    read("app/guide/page.tsx"),
+    read("app/components/UsageSlidesApp.tsx"),
+    read("app/globals.css"),
+  ]);
+  assert.match(page, /UsageSlidesApp/);
+  for (const text of [
+    "候補日時と入力期限日",
+    "回答用URL",
+    "○・△・×",
+    "LINE連携コードを発行",
+    "締切前日19:00に1回だけ",
+  ]) {
+    assert.match(slides, new RegExp(text));
+  }
+  assert.match(slides, /const slideCount = 8/);
+  assert.match(css, /@media \(max-width: 640px\)[\s\S]*?\.guide-deck/);
+});
+
 test("320px幅でも管理・回答・作成画面がはみ出さないための指定がある", async () => {
   const css = await read("app/globals.css");
   assert.match(css, /\.manage-grid > \*,[\s\S]*?min-width: 0/);

@@ -39,6 +39,7 @@ function UsageGuide() {
         <span>HOW TO USE</span>
         <h2 id="usage-guide-title">調整くんの使い方</h2>
         <p>土日・祝日と時間帯の候補をまとめて作り、参加メンバーの予定をかんたんに集められます。</p>
+        <a className="usage-slides-link" href="/guide">スライドで使い方を見る <span aria-hidden="true">→</span></a>
       </div>
 
       <ol className="usage-overview">
