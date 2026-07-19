@@ -2262,65 +2262,6 @@ textarea {
   font-size: clamp(10px, 1vw, 13px);
 }
 
-.guide-finish {
-  display: flex;
-  height: 100%;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  background:
-    radial-gradient(circle at 50% 36%, rgba(18, 148, 71, 0.12), transparent 33%),
-    #fff;
-  padding: 5%;
-  text-align: center;
-}
-
-.guide-finish-mark {
-  display: grid;
-  width: 66px;
-  height: 66px;
-  place-items: center;
-  border-radius: 50%;
-  background: var(--green);
-  box-shadow: 0 14px 30px rgba(18, 148, 71, 0.24);
-  color: #fff;
-  margin-bottom: 15px;
-  font-size: 30px;
-  font-weight: 900;
-}
-
-.guide-finish h1 {
-  margin: 9px 0 17px;
-  font-size: clamp(36px, 5vw, 66px);
-  letter-spacing: -0.055em;
-  line-height: 1.14;
-}
-
-.guide-finish ul {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  margin: 0 0 22px;
-  gap: 8px;
-  padding: 0;
-  list-style: none;
-}
-
-.guide-finish li {
-  border-radius: 999px;
-  background: var(--surface-soft);
-  color: var(--ink-soft);
-  padding: 7px 13px;
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.guide-finish > p {
-  color: var(--muted);
-  margin: 13px 0 0;
-  font-size: 10px;
-}
-
 .guide-controls {
   display: flex;
   align-items: center;
@@ -2750,8 +2691,7 @@ textarea {
   }
 
   .guide-content,
-  .guide-cover-copy,
-  .guide-finish {
+  .guide-cover-copy {
     padding: 30px 24px 34px;
   }
 
@@ -2861,18 +2801,6 @@ textarea {
 
   .guide-line-message {
     grid-column: 1 / -1;
-  }
-
-  .guide-finish {
-    min-height: calc(100svh - 142px);
-  }
-
-  .guide-finish h1 {
-    font-size: clamp(36px, 11vw, 50px);
-  }
-
-  .guide-finish ul {
-    display: grid;
   }
 
   .guide-controls {

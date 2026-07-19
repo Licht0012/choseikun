@@ -45,7 +45,8 @@ test("共有用の使い方スライドに主要な操作とリマインド仕�
   ]) {
     assert.match(slides, new RegExp(text));
   }
-  assert.match(slides, /const slideCount = 8/);
+  assert.match(slides, /const slideCount = 7/);
+  assert.doesNotMatch(slides, /READY|まずはイベントを/);
   assert.match(header, /href="\/guide"/);
   assert.match(css, /@media \(max-width: 640px\)[\s\S]*?\.guide-deck/);
 });

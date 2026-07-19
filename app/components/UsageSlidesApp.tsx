@@ -4,7 +4,7 @@
 
 import { useCallback, useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 
-const slideCount = 8;
+const slideCount = 7;
 
 const slideMeta = [
   { eyebrow: "START HERE", title: "調整くん はじめかたガイド" },
@@ -14,7 +14,6 @@ const slideMeta = [
   { eyebrow: "FOR MEMBERS", title: "参加メンバーは ○・△・× で回答します" },
   { eyebrow: "LINE CONNECT", title: "連携コードをLINEグループへ送ります" },
   { eyebrow: "REMINDER", title: "リマインドは締切前日19:00に1回だけ" },
-  { eyebrow: "READY", title: "これで、みんなの予定を集められます" },
 ] as const;
 
 function StepBadge({ children }: { children: ReactNode }) {
@@ -81,7 +80,7 @@ export function UsageSlidesApp() {
               <div className="guide-cover-copy">
                 <span className="guide-kicker">土日・祝日の予定調整を、かんたんに。</span>
                 <h1>調整くん<br /><em>はじめかたガイド</em></h1>
-                <p>主催者のイベント作成から、参加メンバーの回答、LINEリマインドまでを8枚で確認できます。</p>
+                <p>主催者のイベント作成から、参加メンバーの回答、LINEリマインドまでを7枚で確認できます。</p>
                 <button className="guide-start-button" type="button" onClick={() => move(1)}>ガイドを見る <span aria-hidden="true">→</span></button>
               </div>
               <div className="guide-cover-visual" aria-hidden="true">
@@ -193,16 +192,6 @@ export function UsageSlidesApp() {
             </div>
           )}
 
-          {index === 7 && (
-            <div className="guide-finish">
-              <div className="guide-finish-mark" aria-hidden="true">✓</div>
-              <span className="guide-kicker">準備はできました</span>
-              <h1>まずはイベントを<br />1件作ってみましょう</h1>
-              <ul><li>候補日時と入力期限日を決める</li><li>回答用URLを共有する</li><li>必要ならLINEグループを連携する</li></ul>
-              <a className="guide-start-button" href="/" onClick={(event) => hardNavigate(event, "/")}>調整くんを開く <span aria-hidden="true">→</span></a>
-              <p>choseikun.yucky0629.chatgpt.site</p>
-            </div>
-          )}
         </article>
       </section>
 
