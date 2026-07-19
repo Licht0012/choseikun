@@ -29,9 +29,10 @@ test("公開トップと作成完了画面にLINE連携の使い方が案内さ�
 });
 
 test("共有用の使い方スライドに主要な操作とリマインド仕様が含まれる", async () => {
-  const [page, slides, css] = await Promise.all([
+  const [page, slides, header, css] = await Promise.all([
     read("app/guide/page.tsx"),
     read("app/components/UsageSlidesApp.tsx"),
+    read("app/components/BrandHeader.tsx"),
     read("app/globals.css"),
   ]);
   assert.match(page, /UsageSlidesApp/);
@@ -45,6 +46,7 @@ test("共有用の使い方スライドに主要な操作とリマインド仕�
     assert.match(slides, new RegExp(text));
   }
   assert.match(slides, /const slideCount = 8/);
+  assert.match(header, /href="\/guide"/);
   assert.match(css, /@media \(max-width: 640px\)[\s\S]*?\.guide-deck/);
 });
 
