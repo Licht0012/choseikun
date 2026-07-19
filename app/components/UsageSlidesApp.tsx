@@ -2,7 +2,7 @@
 
 /* eslint-disable @next/next/no-html-link-for-pages, @next/next/no-img-element -- vinextではサイト内URLと静的画像を通常のHTML要素で扱う。 */
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 
 const slideCount = 8;
 
@@ -19,6 +19,11 @@ const slideMeta = [
 
 function StepBadge({ children }: { children: ReactNode }) {
   return <span className="guide-step-badge">{children}</span>;
+}
+
+function hardNavigate(event: MouseEvent<HTMLAnchorElement>, href: string) {
+  event.preventDefault();
+  window.location.assign(href);
 }
 
 function SlideHeading({ index }: { index: number }) {
@@ -62,10 +67,10 @@ export function UsageSlidesApp() {
       }}
     >
       <nav className="guide-deck-bar" aria-label="スライドのメニュー">
-        <a className="guide-brand" href="/" aria-label="調整くん ホームへ戻る">調整<span>くん</span></a>
+        <a className="guide-brand" href="/" aria-label="調整くん ホームへ戻る" onClick={(event) => hardNavigate(event, "/")}>調整<span>くん</span></a>
         <div className="guide-deck-links">
           <span>使い方スライド</span>
-          <a href="/">サイトへ戻る</a>
+          <a href="/" onClick={(event) => hardNavigate(event, "/")}>サイトへ戻る</a>
         </div>
       </nav>
 
@@ -194,7 +199,7 @@ export function UsageSlidesApp() {
               <span className="guide-kicker">準備はできました</span>
               <h1>まずはイベントを<br />1件作ってみましょう</h1>
               <ul><li>候補日時と入力期限日を決める</li><li>回答用URLを共有する</li><li>必要ならLINEグループを連携する</li></ul>
-              <a className="guide-start-button" href="/">調整くんを開く <span aria-hidden="true">→</span></a>
+              <a className="guide-start-button" href="/" onClick={(event) => hardNavigate(event, "/")}>調整くんを開く <span aria-hidden="true">→</span></a>
               <p>choseikun.yucky0629.chatgpt.site</p>
             </div>
           )}
