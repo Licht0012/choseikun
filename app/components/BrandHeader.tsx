@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-html-link-for-pages -- vinextでは同一ページ内アンカーも通常のリンクを使う。 */
+
 interface BrandHeaderProps {
   actionLabel?: string;
   onAction?: () => void;
@@ -18,7 +20,10 @@ export function BrandHeader({ actionLabel, onAction, compact = false }: BrandHea
           {actionLabel}
         </button>
       ) : (
-        <a className="header-link" href="/">イベントを作成</a>
+        <nav className="header-nav" aria-label="メインメニュー">
+          {!compact && <a className="header-link" href="/#how-to-use">使い方</a>}
+          <a className="header-link" href="/#admin-login">イベントを作成</a>
+        </nav>
       )}
     </header>
   );

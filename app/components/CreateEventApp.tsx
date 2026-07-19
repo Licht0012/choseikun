@@ -32,6 +32,46 @@ interface DraftState {
 const rangeKey = (range: TimeOptionInput) => `${range.startTime}-${range.endTime}`;
 const labelForRange = (range: TimeOptionInput) => `${range.startTime}〜${range.endTime}`;
 
+function UsageGuide() {
+  return (
+    <section className="usage-guide" id="how-to-use" aria-labelledby="usage-guide-title">
+      <div className="usage-guide__heading">
+        <span>HOW TO USE</span>
+        <h2 id="usage-guide-title">調整くんの使い方</h2>
+        <p>土日・祝日と時間帯の候補をまとめて作り、参加メンバーの予定をかんたんに集められます。</p>
+      </div>
+
+      <ol className="usage-overview">
+        <li>
+          <span>1</span>
+          <div><strong>イベントを作成</strong><p>候補日時と入力期限日を設定します。</p></div>
+        </li>
+        <li>
+          <span>2</span>
+          <div><strong>回答用URLを共有</strong><p>参加メンバーが「○・△・×」で回答します。</p></div>
+        </li>
+        <li>
+          <span>3</span>
+          <div><strong>結果を確認</strong><p>管理画面で、集まりやすい日時を確認します。</p></div>
+        </li>
+      </ol>
+
+      <div className="usage-line-guide">
+        <div className="usage-line-guide__title">
+          <span className="line-symbol" aria-hidden="true">LINE</span>
+          <div><h3>LINEグループと連携する方法</h3><p>Botを対象のLINEグループへ追加してから、次の順番で操作してください。</p></div>
+        </div>
+        <ol className="usage-line-steps">
+          <li><span>1</span><div><strong>調整くんでイベントを作成します。</strong><p>イベント名・候補日時・入力期限日を入力して作成します。</p></div></li>
+          <li><span>2</span><div><strong>イベント管理画面で「LINE連携コードを発行」を押します。</strong><p>イベント作成後の画面から管理画面を開けます。</p></div></li>
+          <li><span>3</span><div><strong>表示されたメッセージをLINEグループへ送信します。</strong><p>Botから連携完了の返信が届けば設定完了です。</p></div></li>
+        </ol>
+        <p className="usage-reminder-note"><strong>リマインドは入力期限日の前日19:00に1回だけ送信されます。</strong> 毎日通知されることはありません。</p>
+      </div>
+    </section>
+  );
+}
+
 export function CreateEventApp() {
   const [authState, setAuthState] = useState<"loading" | "logged-out" | "logged-in">("loading");
   const [adminPassword, setAdminPassword] = useState("");
@@ -183,8 +223,8 @@ export function CreateEventApp() {
     return (
       <>
         <BrandHeader />
-        <main className="shell shell--auth">
-          <section className="auth-panel">
+        <main className="shell auth-page">
+          <section className="auth-panel" id="admin-login">
             <div className="auth-mark" aria-hidden="true">調</div>
             <h1>主催者ログイン</h1>
             <p>イベントを作る方だけが使う管理画面です。</p>
@@ -195,7 +235,9 @@ export function CreateEventApp() {
               <button className="button button--primary button--wide" type="submit">ログイン</button>
             </form>
           </section>
+          <UsageGuide />
         </main>
+        <footer className="site-footer">© 調整くん</footer>
       </>
     );
   }
@@ -212,6 +254,17 @@ export function CreateEventApp() {
             <div className="share-block">
               <label>参加者用URL</label>
               <div><code>{created.shareUrl}</code><button type="button" onClick={() => copyText(created.shareUrl, "参加者用URLをコピーしました。")}>コピー</button></div>
+            </div>
+            <div className="success-line-guide">
+              <div className="usage-line-guide__title">
+                <span className="line-symbol" aria-hidden="true">LINE</span>
+                <div><h2>次にLINEグループを連携</h2><p>リマインドを使う場合は、次の2ステップで設定できます。</p></div>
+              </div>
+              <ol>
+                <li><span>1</span><p>下のボタンから管理画面を開き、<strong>「LINE連携コードを発行」</strong>を押します。</p></li>
+                <li><span>2</span><p>表示されたメッセージを<strong>対象のLINEグループへ送信</strong>します。</p></li>
+              </ol>
+              <p className="usage-reminder-note"><strong>通知は入力期限日の前日19:00に1回だけ</strong>送信されます。</p>
             </div>
             <div className="success-actions">
               <a className="button button--primary" href={created.manageUrl}>管理画面でLINEを連携</a>

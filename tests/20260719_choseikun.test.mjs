@@ -15,6 +15,19 @@ test("イベント作成画面に必須の入力項目が揃っている", async
   }
 });
 
+test("公開トップと作成完了画面にLINE連携の使い方が案内されている", async () => {
+  const source = await read("app/components/CreateEventApp.tsx");
+  for (const text of [
+    "調整くんの使い方",
+    "調整くんでイベントを作成します",
+    "LINE連携コードを発行",
+    "表示されたメッセージをLINEグループへ送信します",
+    "入力期限日の前日19:00に1回だけ",
+  ]) {
+    assert.match(source, new RegExp(text));
+  }
+});
+
 test("土日祝の判定と自由時間帯の検証がAPI側にもある", async () => {
   const [validation, holidays] = await Promise.all([
     read("lib/validation.ts"),

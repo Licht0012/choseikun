@@ -168,6 +168,12 @@ textarea {
   color: var(--green);
 }
 
+.header-nav {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
 .header-action__icon {
   display: grid;
   width: 24px;
@@ -193,6 +199,15 @@ textarea {
   min-height: calc(100vh - 66px);
   place-items: start center;
   padding-top: 10vh;
+}
+
+.auth-page {
+  width: min(100% - 40px, 1120px);
+  padding-top: 64px;
+}
+
+.auth-page .auth-panel {
+  margin: 0 auto 64px;
 }
 
 .loading-shell {
@@ -949,10 +964,179 @@ textarea {
   font-weight: 900;
 }
 
+.usage-guide {
+  scroll-margin-top: 90px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: var(--shadow);
+  padding: 44px;
+}
+
+.usage-guide__heading {
+  width: min(100%, 720px);
+  margin: 0 auto 32px;
+  text-align: center;
+}
+
+.usage-guide__heading > span {
+  color: var(--green);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+}
+
+.usage-guide__heading h2 {
+  margin: 5px 0 10px;
+  color: var(--ink);
+  font-size: clamp(26px, 3vw, 36px);
+  letter-spacing: -0.04em;
+}
+
+.usage-guide__heading p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.usage-overview {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin: 0 0 34px;
+  gap: 14px;
+  padding: 0;
+  list-style: none;
+}
+
+.usage-overview li {
+  display: flex;
+  min-height: 116px;
+  align-items: flex-start;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-soft);
+  gap: 12px;
+  padding: 18px;
+}
+
+.usage-overview li > span,
+.usage-line-steps li > span,
+.success-line-guide li > span {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--green);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.usage-overview strong,
+.usage-line-steps strong {
+  color: var(--ink);
+}
+
+.usage-overview p,
+.usage-line-steps p {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.usage-line-guide,
+.success-line-guide {
+  border: 1px solid #8fd5ac;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #f1fbf5 0%, #fbfefd 100%);
+  padding: 26px;
+}
+
+.usage-line-guide__title {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.usage-line-guide__title h2,
+.usage-line-guide__title h3 {
+  margin: 0 0 2px;
+  color: var(--ink);
+  font-size: 19px;
+  line-height: 1.4;
+}
+
+.usage-line-guide__title p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.usage-line-steps {
+  display: grid;
+  margin: 24px 0 20px;
+  gap: 12px;
+  padding: 0;
+  list-style: none;
+}
+
+.usage-line-steps li {
+  display: flex;
+  align-items: flex-start;
+  border-top: 1px solid rgba(18, 148, 71, 0.17);
+  gap: 13px;
+  padding-top: 12px;
+}
+
+.usage-line-steps li:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.usage-reminder-note {
+  border-radius: 9px;
+  background: #fff;
+  color: var(--ink-soft);
+  margin: 0;
+  padding: 12px 14px;
+  font-size: 12px;
+}
+
+.usage-reminder-note strong {
+  color: var(--green-dark);
+}
+
 .success-panel {
   width: min(100%, 760px);
   margin: 25px auto;
   text-align: center;
+}
+
+.success-line-guide {
+  margin-top: 26px;
+  text-align: left;
+}
+
+.success-line-guide ol {
+  display: grid;
+  margin: 20px 0;
+  gap: 12px;
+  padding: 0;
+  list-style: none;
+}
+
+.success-line-guide li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.success-line-guide li p {
+  margin: 3px 0 0;
+  color: var(--ink-soft);
+  font-size: 13px;
 }
 
 .success-check {
@@ -1443,6 +1627,14 @@ textarea {
     display: none;
   }
 
+  .header-nav {
+    gap: 14px;
+  }
+
+  .header-link {
+    font-size: 12px;
+  }
+
   .shell,
   .response-shell,
   .manage-shell {
@@ -1453,6 +1645,41 @@ textarea {
   .shell--auth {
     width: min(100% - 28px, 100%);
     padding-top: 7vh;
+  }
+
+  .auth-page {
+    width: min(100% - 28px, 100%);
+    padding-top: 36px;
+  }
+
+  .auth-page .auth-panel {
+    margin-bottom: 38px;
+  }
+
+  .usage-guide {
+    padding: 30px 18px 18px;
+  }
+
+  .usage-guide__heading {
+    margin-bottom: 24px;
+  }
+
+  .usage-overview {
+    grid-template-columns: 1fr;
+    margin-bottom: 24px;
+  }
+
+  .usage-overview li {
+    min-height: 0;
+  }
+
+  .usage-line-guide,
+  .success-line-guide {
+    padding: 18px;
+  }
+
+  .usage-line-guide__title {
+    align-items: flex-start;
   }
 
   .page-heading h1 {
