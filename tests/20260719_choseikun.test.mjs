@@ -28,6 +28,14 @@ test("公開トップと作成完了画面にLINE連携の使い方が案内さ�
   }
 });
 
+test("320px幅でも管理・回答・作成画面がはみ出さないための指定がある", async () => {
+  const css = await read("app/globals.css");
+  assert.match(css, /\.manage-grid > \*,[\s\S]*?min-width: 0/);
+  assert.match(css, /\.line-symbol \{[\s\S]*?flex: 0 0 42px/);
+  assert.match(css, /\.answer-actions \{[\s\S]*?position: static/);
+  assert.match(css, /@media \(max-width: 360px\)[\s\S]*?\.form-actions \.button/);
+});
+
 test("土日祝の判定と自由時間帯の検証がAPI側にもある", async () => {
   const [validation, holidays] = await Promise.all([
     read("lib/validation.ts"),

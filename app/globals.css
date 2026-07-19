@@ -782,6 +782,7 @@ textarea {
   display: grid;
   width: 42px;
   height: 42px;
+  flex: 0 0 42px;
   place-items: center;
   border-radius: 11px;
   background: #06c755;
@@ -1060,12 +1061,18 @@ textarea {
   gap: 14px;
 }
 
+.usage-line-guide__title > div,
+.switch-row > span:nth-child(2) {
+  min-width: 0;
+}
+
 .usage-line-guide__title h2,
 .usage-line-guide__title h3 {
   margin: 0 0 2px;
   color: var(--ink);
   font-size: 19px;
   line-height: 1.4;
+  text-wrap: balance;
 }
 
 .usage-line-guide__title p {
@@ -1172,6 +1179,7 @@ textarea {
 }
 
 .share-block code {
+  min-width: 0;
   overflow: hidden;
   flex: 1;
   padding: 12px 14px;
@@ -1493,6 +1501,12 @@ textarea {
   gap: 24px;
 }
 
+.manage-grid > *,
+.manage-side,
+.manage-side > * {
+  min-width: 0;
+}
+
 .manage-panel {
   padding: 28px;
 }
@@ -1680,6 +1694,12 @@ textarea {
 
   .usage-line-guide__title {
     align-items: flex-start;
+    gap: 10px;
+  }
+
+  .usage-line-guide__title h2,
+  .usage-line-guide__title h3 {
+    font-size: 17px;
   }
 
   .page-heading h1 {
@@ -1753,13 +1773,53 @@ textarea {
   }
 
   .form-actions .button {
+    min-width: 0;
     min-height: 48px;
-    padding: 9px 12px;
-    font-size: 13px;
+    padding: 9px 7px;
+    font-size: 12px;
+    line-height: 1.25;
+    white-space: nowrap;
   }
 
   .form-actions .button--secondary {
-    flex-basis: 38%;
+    flex: 0 1 42%;
+  }
+
+  .switch-row {
+    grid-template-columns: 40px minmax(0, 1fr) 48px;
+    gap: 9px;
+    padding: 12px;
+  }
+
+  .switch-row strong {
+    font-size: 13px;
+    line-height: 1.4;
+    text-wrap: balance;
+  }
+
+  .switch-row small {
+    font-size: 11px;
+    line-height: 1.45;
+  }
+
+  .switch-row > i {
+    width: 48px;
+    height: 28px;
+  }
+
+  .switch-row > i::after {
+    width: 20px;
+    height: 20px;
+  }
+
+  .switch-row input:checked + i::after {
+    transform: translateX(20px);
+  }
+
+  .line-symbol {
+    width: 40px;
+    height: 40px;
+    flex-basis: 40px;
   }
 
   .auth-panel,
@@ -1828,9 +1888,7 @@ textarea {
   }
 
   .answer-actions {
-    position: sticky;
-    z-index: 20;
-    bottom: 0;
+    position: static;
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 8px;
@@ -1880,6 +1938,85 @@ textarea {
 
   .compact-stats strong {
     font-size: 16px;
+  }
+}
+
+@media (max-width: 360px) {
+  .brand-header {
+    padding: 0 14px;
+  }
+
+  .brand {
+    font-size: 23px;
+  }
+
+  .header-nav {
+    gap: 10px;
+  }
+
+  .header-link {
+    padding-right: 1px;
+    padding-left: 1px;
+    font-size: 11px;
+  }
+
+  .switch-row {
+    grid-template-columns: 36px minmax(0, 1fr) 44px;
+    gap: 7px;
+    padding: 10px;
+  }
+
+  .switch-row strong {
+    font-size: 12px;
+  }
+
+  .line-symbol {
+    width: 36px;
+    height: 36px;
+    flex-basis: 36px;
+    border-radius: 9px;
+    font-size: 8px;
+  }
+
+  .switch-row > i {
+    width: 44px;
+    height: 26px;
+  }
+
+  .switch-row > i::after {
+    width: 18px;
+    height: 18px;
+  }
+
+  .switch-row input:checked + i::after {
+    transform: translateX(18px);
+  }
+
+  .form-actions {
+    padding: 8px;
+  }
+
+  .form-actions .button {
+    padding-right: 5px;
+    padding-left: 5px;
+    font-size: 11px;
+  }
+
+  .slot-answer-row {
+    grid-template-columns: 88px minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .slot-answer-row > span {
+    font-size: 12px;
+  }
+
+  .availability-control button {
+    min-width: 0;
+  }
+
+  .line-code-box > strong {
+    font-size: 27px;
   }
 }
 

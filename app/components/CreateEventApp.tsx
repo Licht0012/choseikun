@@ -258,7 +258,7 @@ export function CreateEventApp() {
             <div className="success-line-guide">
               <div className="usage-line-guide__title">
                 <span className="line-symbol" aria-hidden="true">LINE</span>
-                <div><h2>次にLINEグループを連携</h2><p>リマインドを使う場合は、次の2ステップで設定できます。</p></div>
+                <div><h2>次に<wbr />LINEグループを連携</h2><p>リマインドを使う場合は、次の2ステップで設定できます。</p></div>
               </div>
               <ol>
                 <li><span>1</span><p>下のボタンから管理画面を開き、<strong>「LINE連携コードを発行」</strong>を押します。</p></li>
