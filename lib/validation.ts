@@ -12,7 +12,10 @@ export function isValidTimeRange(option: TimeOptionInput): boolean {
   return timePattern.test(option.startTime) && timePattern.test(option.endTime) && option.startTime < option.endTime;
 }
 
-export function validateCreateEvent(input: CreateEventInput | null): { value?: CreateEventInput; error?: string } {
+export function validateCreateEvent(
+  input: CreateEventInput | null,
+  options: { allowPastDeadline?: boolean } = {},
+): { value?: CreateEventInput; error?: string } {
   if (!input) return { error: "入力内容を確認してください。" };
   const name = cleanText(input.name, 100);
   const memo = cleanText(input.memo, 500);
@@ -33,7 +36,7 @@ export function validateCreateEvent(input: CreateEventInput | null): { value?: C
   if (uniqueTimeOptions.length === 0 || uniqueTimeOptions.length > 8) return { error: "時間帯候補を1〜8件選んでください。" };
   if (!datePattern.test(deadlineDate)) return { error: "入力期限日を選んでください。" };
   const today = toDateKey(new Date());
-  if (deadlineDate < today) return { error: "入力期限日は今日以降にしてください。" };
+  if (!options.allowPastDeadline && deadlineDate < today) return { error: "入力期限日は今日以降にしてください。" };
   if (parseDateKey(deadlineDate) > parseDateKey(dates[0])) return { error: "入力期限日は最初の候補日以前にしてください。" };
   return {
     value: {

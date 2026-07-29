@@ -8,6 +8,7 @@ interface BrandHeaderProps {
   actionLabel?: string;
   onAction?: () => void;
   compact?: boolean;
+  utilityLink?: { label: string; href: string };
 }
 
 function hardNavigate(event: MouseEvent<HTMLAnchorElement>, href: string) {
@@ -15,15 +16,21 @@ function hardNavigate(event: MouseEvent<HTMLAnchorElement>, href: string) {
   window.location.assign(href);
 }
 
-export function BrandHeader({ actionLabel, onAction, compact = false }: BrandHeaderProps) {
+export function BrandHeader({ actionLabel, onAction, compact = false, utilityLink }: BrandHeaderProps) {
   return (
     <header className={`brand-header${compact ? " brand-header--compact" : ""}`}>
       <a className="brand" href="/" aria-label="調整くん ホーム" onClick={(event) => hardNavigate(event, "/")}>
-        調整<span>くん</span>
+        <span className="brand-main">調整</span>
+        <span className="brand-kun">くん</span>
       </a>
       {actionLabel && onAction ? (
         <nav className="header-nav" aria-label="主催者メニュー">
           <a className="header-link" href="/guide" onClick={(event) => hardNavigate(event, "/guide")}>使い方</a>
+          {utilityLink ? (
+            <a className="header-link" href={utilityLink.href} onClick={(event) => hardNavigate(event, utilityLink.href)}>
+              {utilityLink.label}
+            </a>
+          ) : null}
           <button className="header-action" type="button" onClick={onAction}>
             <span className="header-action__icon" aria-hidden="true">◎</span>
             {actionLabel}
@@ -32,6 +39,11 @@ export function BrandHeader({ actionLabel, onAction, compact = false }: BrandHea
       ) : (
         <nav className="header-nav" aria-label="メインメニュー">
           {!compact && <a className="header-link" href="/guide" onClick={(event) => hardNavigate(event, "/guide")}>使い方</a>}
+          {utilityLink ? (
+            <a className="header-link" href={utilityLink.href} onClick={(event) => hardNavigate(event, utilityLink.href)}>
+              {utilityLink.label}
+            </a>
+          ) : null}
           <a className="header-link" href="/#admin-login">イベントを作成</a>
         </nav>
       )}

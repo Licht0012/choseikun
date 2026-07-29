@@ -5,14 +5,52 @@ import test from "node:test";
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
 test("イベント作成画面に必須の入力項目が揃っている", async () => {
-  const source = await read("app/components/CreateEventApp.tsx");
+  const [source, timeOptions] = await Promise.all([
+    read("app/components/CreateEventApp.tsx"),
+    read("lib/time-options.ts"),
+  ]);
   for (const text of ["イベント名", "メモ", "日程候補", "時間帯候補", "入力期限日"]) {
     assert.match(source, new RegExp(text));
   }
   assert.doesNotMatch(source, /合言葉/);
   for (const range of ["10:00", "12:00", "13:00", "15:00", "18:00", "20:00"]) {
-    assert.match(source, new RegExp(range));
+    assert.match(timeOptions, new RegExp(range));
   }
+});
+
+test("作成者がイベント履歴からイベント名と候補日時を再編集できる", async () => {
+  const [history, historyApi, manage, manageApi, editor] = await Promise.all([
+    read("app/components/EventHistoryApp.tsx"),
+    read("app/api/events/route.ts"),
+    read("app/components/ManageEventApp.tsx"),
+    read("app/api/manage/event/[slug]/route.ts"),
+    read("lib/event-editor.ts"),
+  ]);
+  assert.match(history, /イベント履歴/);
+  assert.match(history, /再編集する/);
+  assert.match(historyApi, /isAdminRequest/);
+  assert.match(historyApi, /manageUrl/);
+  for (const text of ["イベント名", "日程候補", "時間帯候補", "変更を保存"]) {
+    assert.match(manage, new RegExp(text));
+  }
+  assert.match(manage, /回答がある候補を削除しますか/);
+  assert.match(manageApi, /updateEventConfiguration/);
+  assert.match(editor, /existingDates/);
+  assert.match(editor, /existingTimes/);
+  assert.match(editor, /existingSlots/);
+  assert.match(editor, /DELETE FROM availability WHERE slot_id/);
+});
+
+test("調整くんのブランド書体が専用の文字組みで適用される", async () => {
+  const [header, css] = await Promise.all([
+    read("app/components/BrandHeader.tsx"),
+    read("app/globals.css"),
+  ]);
+  assert.match(header, /brand-main/);
+  assert.match(header, /brand-kun/);
+  assert.match(css, /@font-face/);
+  assert.match(css, /20260720_mochiy-pop-one-choseikun\.woff2/);
+  assert.match(css, /\.brand-kun/);
 });
 
 test("公開トップと作成完了画面にLINE連携の使い方が案内されている", async () => {

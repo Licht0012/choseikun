@@ -1,17 +1,14 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import Skeleton from "react-loading-skeleton";
 import { BrandHeader } from "@/app/components/BrandHeader";
 import { CalendarPicker } from "@/app/components/CalendarPicker";
 import { addDays, toDateKey } from "@/lib/japanese-holidays";
+import { FIXED_TIME_OPTIONS, timeOptionKey, timeOptionLabel } from "@/lib/time-options";
 import type { CreateEventInput, TimeOptionInput } from "@/lib/types";
 
-const fixedRanges: TimeOptionInput[] = [
-  { startTime: "10:00", endTime: "12:00" },
-  { startTime: "13:00", endTime: "15:00" },
-  { startTime: "18:00", endTime: "20:00" },
-];
+const fixedRanges = FIXED_TIME_OPTIONS;
 
 interface CreatedEvent {
   slug: string;
@@ -29,8 +26,8 @@ interface DraftState {
   reminderEnabled: boolean;
 }
 
-const rangeKey = (range: TimeOptionInput) => `${range.startTime}-${range.endTime}`;
-const labelForRange = (range: TimeOptionInput) => `${range.startTime}〜${range.endTime}`;
+const rangeKey = timeOptionKey;
+const labelForRange = timeOptionLabel;
 
 function UsageGuide() {
   return (
@@ -91,19 +88,33 @@ export function CreateEventApp() {
   const [submitting, setSubmitting] = useState(false);
   const [created, setCreated] = useState<CreatedEvent | null>(null);
 
-  useEffect(() => {
-    fetch("/api/auth", { cache: "no-store" })
-      .then((response) => response.json() as Promise<{ authenticated?: boolean }>)
-      .then((data) => setAuthState(data.authenticated ? "logged-in" : "logged-out"))
-      .catch(() => setAuthState("logged-out"));
+  const loadDraft = useCallback(() => {
+    const stored = localStorage.getItem("choseikun-event-draft");
+    if (!stored) return;
+    try {
+      const draft = JSON.parse(stored) as DraftState;
+      setName(draft.name || "");
+      setMemo(draft.memo || "");
+      setDates(Array.isArray(draft.dates) ? draft.dates : []);
+      setSelectedFixed(Array.isArray(draft.selectedFixed) ? draft.selectedFixed : fixedRanges.map(rangeKey));
+      setCustomRanges(Array.isArray(draft.customRanges) ? draft.customRanges : []);
+      setDeadlineDate(draft.deadlineDate || "");
+      setReminderEnabled(draft.reminderEnabled !== false);
+      setNotice("下書きを読み込みました。");
+    } catch {
+      localStorage.removeItem("choseikun-event-draft");
+    }
   }, []);
 
   useEffect(() => {
-    if (!dates.length || deadlineDate) return;
-    const suggested = addDays(dates[0], -2);
-    const today = toDateKey(new Date());
-    setDeadlineDate(suggested < today ? today : suggested);
-  }, [dates, deadlineDate]);
+    fetch("/api/auth", { cache: "no-store" })
+      .then((response) => response.json() as Promise<{ authenticated?: boolean }>)
+      .then((data) => {
+        setAuthState(data.authenticated ? "logged-in" : "logged-out");
+        if (data.authenticated) loadDraft();
+      })
+      .catch(() => setAuthState("logged-out"));
+  }, [loadDraft]);
 
   const selectedTimeOptions = useMemo(
     () => [...fixedRanges.filter((range) => selectedFixed.includes(rangeKey(range))), ...customRanges],
@@ -134,6 +145,14 @@ export function CreateEventApp() {
     setSelectedFixed((current) => current.includes(key) ? current.filter((value) => value !== key) : [...current, key]);
   };
 
+  const handleDatesChange = (nextDates: string[]) => {
+    setDates(nextDates);
+    if (deadlineDate || nextDates.length === 0) return;
+    const suggested = addDays(nextDates[0], -2);
+    const today = toDateKey(new Date());
+    setDeadlineDate(suggested < today ? today : suggested);
+  };
+
   const addCustomRange = () => {
     setError("");
     if (!customStart || !customEnd || customStart >= customEnd) {
@@ -151,30 +170,6 @@ export function CreateEventApp() {
     setNotice("下書きをこの端末に保存しました。");
     window.setTimeout(() => setNotice(""), 3000);
   };
-
-  const loadDraft = () => {
-    const stored = localStorage.getItem("choseikun-event-draft");
-    if (!stored) return;
-    try {
-      const draft = JSON.parse(stored) as DraftState;
-      setName(draft.name || "");
-      setMemo(draft.memo || "");
-      setDates(Array.isArray(draft.dates) ? draft.dates : []);
-      setSelectedFixed(Array.isArray(draft.selectedFixed) ? draft.selectedFixed : fixedRanges.map(rangeKey));
-      setCustomRanges(Array.isArray(draft.customRanges) ? draft.customRanges : []);
-      setDeadlineDate(draft.deadlineDate || "");
-      setReminderEnabled(draft.reminderEnabled !== false);
-      setNotice("下書きを読み込みました。");
-    } catch {
-      localStorage.removeItem("choseikun-event-draft");
-    }
-  };
-
-  useEffect(() => {
-    if (authState === "logged-in") loadDraft();
-    // 下書きはログイン完了時に一度だけ復元する。
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authState]);
 
   const handleCreate = async (event: FormEvent) => {
     event.preventDefault();
@@ -246,7 +241,7 @@ export function CreateEventApp() {
   if (created) {
     return (
       <>
-        <BrandHeader actionLabel="主催者メニュー" onAction={handleLogout} />
+        <BrandHeader actionLabel="ログアウト" onAction={handleLogout} utilityLink={{ label: "イベント履歴", href: "/history" }} />
         <main className="shell shell--narrow">
           <section className="success-panel">
             <span className="success-check" aria-hidden="true">✓</span>
@@ -281,7 +276,7 @@ export function CreateEventApp() {
 
   return (
     <>
-      <BrandHeader actionLabel="主催者メニュー" onAction={handleLogout} />
+      <BrandHeader actionLabel="ログアウト" onAction={handleLogout} utilityLink={{ label: "イベント履歴", href: "/history" }} />
       <main className="shell create-shell">
         <div className="page-heading">
           <h1>イベントを作成</h1>
@@ -309,7 +304,7 @@ export function CreateEventApp() {
           <section className="form-section schedule-section">
             <div className="section-column">
               <div className="section-title"><h2>日程候補</h2><p>土日・祝日のみ選べます</p></div>
-              <CalendarPicker selectedDates={dates} onChange={setDates} />
+              <CalendarPicker selectedDates={dates} onChange={handleDatesChange} />
             </div>
             <div className="section-column">
               <div className="section-title"><h2>時間帯候補</h2><p>よく使う時間帯を選ぶか、「その他」で自由に追加できます</p></div>

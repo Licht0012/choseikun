@@ -36,6 +36,34 @@ export async function findEventByAdminToken(token: string): Promise<EventRecord 
   );
 }
 
+export interface EventHistoryRecord {
+  id: string;
+  slug: string;
+  name: string;
+  deadline_date: string;
+  created_at: string;
+  updated_at: string;
+  response_count: number;
+  slot_count: number;
+}
+
+export async function listEventHistory(): Promise<EventHistoryRecord[]> {
+  const db = await getDb();
+  const result = await db
+    .prepare(
+      `SELECT e.id, e.slug, e.name, e.deadline_date, e.created_at, e.updated_at,
+              COUNT(DISTINCT r.id) AS response_count,
+              COUNT(DISTINCT s.id) AS slot_count
+       FROM events e
+       LEFT JOIN responses r ON r.event_id = e.id
+       LEFT JOIN slots s ON s.event_id = e.id
+       GROUP BY e.id
+       ORDER BY e.created_at DESC`,
+    )
+    .all<EventHistoryRecord>();
+  return result.results;
+}
+
 export async function buildPublicEvent(event: EventRecord): Promise<PublicEventView> {
   const db = await getDb();
   const [slotResult, responseResult, availabilityResult] = await Promise.all([

@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-html-link-for-pages -- vinextでは通常のリンクによる画面遷移を使う。 */
+
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import Skeleton from "react-loading-skeleton";
 import { BrandHeader } from "@/app/components/BrandHeader";
@@ -54,19 +56,26 @@ export function EventResponseApp({ slug }: EventResponseAppProps) {
 
   const editTokenKey = `choseikun-edit-${slug}`;
 
-  const loadEvent = async () => {
-    const response = await fetch(`/api/events/${encodeURIComponent(slug)}`, { cache: "no-store" });
-    if (response.status === 404) return setState("missing");
-    const data = (await response.json()) as { event?: PublicEventView };
-    if (!response.ok || !data.event) return setState("missing");
-    setEvent(data.event);
-    setPriorAvailable(Boolean(localStorage.getItem(editTokenKey)));
-    setState("ready");
-  };
-
   useEffect(() => {
-    loadEvent();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    let active = true;
+    fetch(`/api/events/${encodeURIComponent(slug)}`, { cache: "no-store" })
+      .then(async (response) => {
+        if (response.status === 404) return { missing: true };
+        const data = (await response.json()) as { event?: PublicEventView };
+        if (!response.ok || !data.event) return { missing: true };
+        return { event: data.event };
+      })
+      .then((data) => {
+        if (!active) return;
+        if ("missing" in data || !data.event) return setState("missing");
+        setEvent(data.event);
+        setPriorAvailable(Boolean(localStorage.getItem(`choseikun-edit-${slug}`)));
+        setState("ready");
+      })
+      .catch(() => active && setState("missing"));
+    return () => {
+      active = false;
+    };
   }, [slug]);
 
   const groupedSlots = useMemo(() => groupSlots(event?.slots || []), [event]);
@@ -214,7 +223,7 @@ export function EventResponseApp({ slug }: EventResponseAppProps) {
                     return (
                       <tr key={slot.id} className={best ? "is-best" : ""}>
                         <th><span>{formatDate(slot.date)} {slot.label}</span><small><b className="status-yes">○ {count.yes}</b><b className="status-maybe">△ {count.maybe}</b><b className="status-no">× {count.no}</b></small></th>
-                        {event.responses.map((response) => { const status = response.availability[slot.id] || "no"; return <td className={`status-${status}`} key={response.id}>{statusLabels[status].symbol}</td>; })}
+                        {event.responses.map((response) => { const status = response.availability[slot.id]; return status ? <td className={`status-${status}`} key={response.id}>{statusLabels[status].symbol}</td> : <td className="status-unanswered" key={response.id}>—</td>; })}
                       </tr>
                     );
                   })}

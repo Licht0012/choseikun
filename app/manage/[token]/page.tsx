@@ -5,5 +5,5 @@ export const metadata: Metadata = { title: "イベント管理" };
 
 export default async function ManagePage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
-  return <ManageEventApp token={token} />;
+  return <ManageEventApp access={{ type: "token", value: token }} />;
 }

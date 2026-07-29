@@ -18,9 +18,9 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/og.png",
-        width: 1731,
-        height: 909,
+        url: "/20260729_choseikun-social-card.png",
+        width: 1734,
+        height: 907,
         alt: "調整くん — 土日祝と時間帯を選ぶだけ",
       },
     ],
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "調整くん",
     description: "土日祝と時間帯を選ぶだけの日程調整",
-    images: ["/og.png"],
+    images: ["/20260729_choseikun-social-card.png"],
   },
 };
 

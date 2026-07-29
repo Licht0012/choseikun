@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { getCalendarDayKind, holidayName, parseDateKey, toDateKey } from "@/lib/japanese-holidays";
 
 interface CalendarPickerProps {
@@ -17,7 +17,15 @@ function labelForDate(value: string): string {
 export function CalendarPicker({ selectedDates, onChange }: CalendarPickerProps) {
   const today = new Date();
   const [viewMonth, setViewMonth] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1, 12));
+  const initializedFromSelection = useRef(false);
   const selected = useMemo(() => new Set(selectedDates), [selectedDates]);
+
+  useEffect(() => {
+    if (initializedFromSelection.current || selectedDates.length === 0) return;
+    const firstSelected = parseDateKey(selectedDates[0]);
+    setViewMonth(new Date(firstSelected.getFullYear(), firstSelected.getMonth(), 1, 12));
+    initializedFromSelection.current = true;
+  }, [selectedDates]);
   const firstDayOffset = (viewMonth.getDay() + 6) % 7;
   const daysInMonth = new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 0, 12).getDate();
   const todayKey = toDateKey(today);

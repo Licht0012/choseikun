@@ -43,3 +43,17 @@ export interface PublicEventView {
   slots: SlotView[];
   responses: ResponseView[];
 }
+
+export interface EventHistoryItem {
+  id: string;
+  slug: string;
+  name: string;
+  deadlineDate: string;
+  createdAt: string;
+  updatedAt: string;
+  responseCount: number;
+  slotCount: number;
+  isOpen: boolean;
+  shareUrl: string;
+  manageUrl: string;
+}
