@@ -78,13 +78,13 @@ export function UsageSlidesApp() {
           {index === 0 && (
             <div className="guide-cover">
               <div className="guide-cover-copy">
-                <span className="guide-kicker">土日・祝日の予定調整を、かんたんに。</span>
+                <span className="guide-kicker">土日・祝日も平日も、予定調整をかんたんに。</span>
                 <h1>調整くん<br /><em>はじめかたガイド</em></h1>
                 <p>主催者のイベント作成から、参加メンバーの回答、LINEリマインドまでを7枚で確認できます。</p>
                 <button className="guide-start-button" type="button" onClick={() => move(1)}>ガイドを見る <span aria-hidden="true">→</span></button>
               </div>
               <div className="guide-cover-visual" aria-hidden="true">
-                <div className="guide-orbit guide-orbit--one"><strong>土日祝</strong><span>だけ選択</span></div>
+                <div className="guide-orbit guide-orbit--one"><strong>土日祝</strong><span>から選択</span></div>
                 <div className="guide-orbit guide-orbit--two"><strong>3つ</strong><span>定番時間帯</span></div>
                 <div className="guide-phone guide-phone--cover">
                   <div className="guide-phone-top" />
@@ -98,7 +98,7 @@ export function UsageSlidesApp() {
             <div className="guide-content">
               <SlideHeading index={index} />
               <ol className="guide-flow">
-                <li><StepBadge>1</StepBadge><div><strong>イベントを作る</strong><p>候補の土日祝、時間帯、入力期限日を設定</p></div></li>
+                <li><StepBadge>1</StepBadge><div><strong>イベントを作る</strong><p>候補日、時間帯、入力期限日を設定</p></div></li>
                 <li><StepBadge>2</StepBadge><div><strong>回答用URLを送る</strong><p>LINEなどで参加メンバーへ共有</p></div></li>
                 <li><StepBadge>3</StepBadge><div><strong>結果を確認する</strong><p>○・△・×が集まった日時から決定</p></div></li>
               </ol>
@@ -112,7 +112,7 @@ export function UsageSlidesApp() {
                 <SlideHeading index={index} />
                 <ol className="guide-checklist">
                   <li><StepBadge>1</StepBadge><div><strong>イベント名・メモ</strong><p>集まりの目的や補足を書きます。</p></div></li>
-                  <li><StepBadge>2</StepBadge><div><strong>日程候補</strong><p>カレンダーから土日・祝日を選びます。</p></div></li>
+                  <li><StepBadge>2</StepBadge><div><strong>日程候補</strong><p>初期設定は土日・祝日。必要なら平日も選べます。</p></div></li>
                   <li><StepBadge>3</StepBadge><div><strong>時間帯候補</strong><p>10–12時／13–15時／18–20時。その他は自由入力できます。</p></div></li>
                   <li><StepBadge>4</StepBadge><div><strong>入力期限日</strong><p>カレンダーから回答の締切日を選びます。</p></div></li>
                 </ol>

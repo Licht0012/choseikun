@@ -6,6 +6,8 @@ import { getCalendarDayKind, holidayName, parseDateKey, toDateKey } from "@/lib/
 interface CalendarPickerProps {
   selectedDates: string[];
   onChange: (dates: string[]) => void;
+  allowWeekdays: boolean;
+  onAllowWeekdaysChange: (allow: boolean) => void;
 }
 
 const weekdays = ["月", "火", "水", "木", "金", "土", "日"];
@@ -14,11 +16,12 @@ function labelForDate(value: string): string {
   return new Intl.DateTimeFormat("ja-JP", { month: "numeric", day: "numeric", weekday: "short" }).format(parseDateKey(value));
 }
 
-export function CalendarPicker({ selectedDates, onChange }: CalendarPickerProps) {
+export function CalendarPicker({ selectedDates, onChange, allowWeekdays, onAllowWeekdaysChange }: CalendarPickerProps) {
   const today = new Date();
   const [viewMonth, setViewMonth] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1, 12));
   const initializedFromSelection = useRef(false);
   const selected = useMemo(() => new Set(selectedDates), [selectedDates]);
+  const hasSelectedWeekdays = selectedDates.some((date) => getCalendarDayKind(date) === "weekday");
 
   useEffect(() => {
     if (initializedFromSelection.current || selectedDates.length === 0) return;
@@ -48,6 +51,15 @@ export function CalendarPicker({ selectedDates, onChange }: CalendarPickerProps)
 
   return (
     <div className="calendar-picker">
+      <label className="calendar-weekday-toggle">
+        <input
+          type="checkbox"
+          checked={allowWeekdays}
+          disabled={allowWeekdays && hasSelectedWeekdays}
+          onChange={(event) => onAllowWeekdaysChange(event.target.checked)}
+        />
+        <span><strong>平日も候補にする</strong><small>{hasSelectedWeekdays ? "平日の候補を外すとオフにできます" : "初期設定は土日・祝日のみ。必要なときにオンにできます"}</small></span>
+      </label>
       <div className="calendar-toolbar">
         <button type="button" className="icon-button" onClick={() => moveMonth(-1)} disabled={currentMonthKey <= todayMonthKey} aria-label="前の月">‹</button>
         <strong>{viewMonth.getFullYear()}年 {viewMonth.getMonth() + 1}月</strong>
@@ -65,8 +77,8 @@ export function CalendarPicker({ selectedDates, onChange }: CalendarPickerProps)
           const key = toDateKey(date);
           const kind = getCalendarDayKind(key);
           const isPast = key < todayKey;
-          const isSelectable = kind !== "weekday" && !isPast;
           const isSelected = selected.has(key);
+          const isSelectable = !isPast && (kind !== "weekday" || allowWeekdays || isSelected);
           const holiday = holidayName(key);
           return (
             <button
@@ -88,7 +100,7 @@ export function CalendarPicker({ selectedDates, onChange }: CalendarPickerProps)
         <span><i className="legend-dot legend-dot--selected" />選択中</span>
         <span><i className="legend-dot legend-dot--saturday" />土曜日</span>
         <span><i className="legend-dot legend-dot--holiday" />日曜・祝日</span>
-        <span><i className="legend-dot legend-dot--disabled" />平日（選択不可）</span>
+        <span><i className="legend-dot legend-dot--disabled" />{allowWeekdays ? "平日（選択可）" : "平日（通常は選択不可）"}</span>
       </div>
       <div className="selected-date-summary">
         <strong>選択中：{selectedDates.length}日</strong>

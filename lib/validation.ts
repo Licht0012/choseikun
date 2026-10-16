@@ -1,4 +1,4 @@
-import { isSelectableCandidateDate, parseDateKey, toDateKey } from "@/lib/japanese-holidays";
+import { isValidCandidateDate, parseDateKey, toDateKey } from "@/lib/japanese-holidays";
 import type { CreateEventInput, TimeOptionInput } from "@/lib/types";
 
 const timePattern = /^([01]\d|2[0-3]):([0-5]\d)$/;
@@ -32,7 +32,7 @@ export function validateCreateEvent(
 
   if (!name) return { error: "イベント名を入力してください。" };
   if (dates.length === 0 || dates.length > 20) return { error: "日程候補を1〜20日選んでください。" };
-  if (dates.some((date) => !isSelectableCandidateDate(date))) return { error: "日程候補には土日・祝日のみ選べます。" };
+  if (dates.some((date) => !isValidCandidateDate(date))) return { error: "日程候補の日付を確認してください。" };
   if (uniqueTimeOptions.length === 0 || uniqueTimeOptions.length > 8) return { error: "時間帯候補を1〜8件選んでください。" };
   if (!datePattern.test(deadlineDate)) return { error: "入力期限日を選んでください。" };
   const today = toDateKey(new Date());

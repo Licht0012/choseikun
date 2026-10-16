@@ -87,8 +87,8 @@ export function getCalendarDayKind(value: string): CalendarDayKind {
   return "weekday";
 }
 
-export function isSelectableCandidateDate(value: string): boolean {
-  return getCalendarDayKind(value) !== "weekday";
+export function isValidCandidateDate(value: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) && toDateKey(parseDateKey(value)) === value;
 }
 
 export function addDays(value: string, days: number): string {

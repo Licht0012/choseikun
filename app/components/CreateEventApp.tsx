@@ -3,7 +3,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { BrandHeader } from "@/app/components/BrandHeader";
 import { CalendarPicker } from "@/app/components/CalendarPicker";
-import { addDays, toDateKey } from "@/lib/japanese-holidays";
+import { addDays, getCalendarDayKind, toDateKey } from "@/lib/japanese-holidays";
 import { rememberManagedEventToken, tokenFromManageUrl } from "@/lib/managed-events";
 import { FIXED_TIME_OPTIONS, timeOptionKey, timeOptionLabel } from "@/lib/time-options";
 import type { CreateEventInput, TimeOptionInput } from "@/lib/types";
@@ -20,6 +20,7 @@ interface DraftState {
   name: string;
   memo: string;
   dates: string[];
+  allowWeekdays?: boolean;
   selectedFixed: string[];
   customRanges: TimeOptionInput[];
   deadlineDate: string;
@@ -35,7 +36,7 @@ function UsageGuide() {
       <div className="usage-guide__heading">
         <span>HOW TO USE</span>
         <h2 id="usage-guide-title">調整くんの使い方</h2>
-        <p>土日・祝日と時間帯の候補をまとめて作り、参加メンバーの予定をかんたんに集められます。</p>
+        <p>土日・祝日を中心に、必要なら平日も候補に追加。時間帯とあわせて、参加メンバーの予定をかんたんに集められます。</p>
         <a className="usage-slides-link" href="/guide" onClick={(event) => { event.preventDefault(); window.location.assign("/guide"); }}>スライドで使い方を見る <span aria-hidden="true">→</span></a>
       </div>
 
@@ -74,6 +75,7 @@ export function CreateEventApp() {
   const [name, setName] = useState("");
   const [memo, setMemo] = useState("");
   const [dates, setDates] = useState<string[]>([]);
+  const [allowWeekdays, setAllowWeekdays] = useState(false);
   const [selectedFixed, setSelectedFixed] = useState(() => fixedRanges.map(rangeKey));
   const [otherOpen, setOtherOpen] = useState(false);
   const [customStart, setCustomStart] = useState("16:00");
@@ -93,7 +95,9 @@ export function CreateEventApp() {
       const draft = JSON.parse(stored) as DraftState;
       setName(draft.name || "");
       setMemo(draft.memo || "");
-      setDates(Array.isArray(draft.dates) ? draft.dates : []);
+      const draftDates = Array.isArray(draft.dates) ? draft.dates : [];
+      setDates(draftDates);
+      setAllowWeekdays(draft.allowWeekdays === true || draftDates.some((date) => getCalendarDayKind(date) === "weekday"));
       setSelectedFixed(Array.isArray(draft.selectedFixed) ? draft.selectedFixed : fixedRanges.map(rangeKey));
       setCustomRanges(Array.isArray(draft.customRanges) ? draft.customRanges : []);
       setDeadlineDate(draft.deadlineDate || "");
@@ -138,7 +142,7 @@ export function CreateEventApp() {
   };
 
   const saveDraft = () => {
-    const draft: DraftState = { name, memo, dates, selectedFixed, customRanges, deadlineDate, reminderEnabled };
+    const draft: DraftState = { name, memo, dates, allowWeekdays, selectedFixed, customRanges, deadlineDate, reminderEnabled };
     localStorage.setItem("choseikun-event-draft", JSON.stringify(draft));
     setNotice("下書きをこの端末に保存しました。");
     window.setTimeout(() => setNotice(""), 3000);
@@ -247,8 +251,8 @@ export function CreateEventApp() {
 
           <section className="form-section schedule-section">
             <div className="section-column">
-              <div className="section-title"><h2>日程候補</h2><p>土日・祝日のみ選べます</p></div>
-              <CalendarPicker selectedDates={dates} onChange={handleDatesChange} />
+              <div className="section-title"><h2>日程候補</h2><p>土日・祝日が初期設定。平日も追加できます</p></div>
+              <CalendarPicker selectedDates={dates} onChange={handleDatesChange} allowWeekdays={allowWeekdays} onAllowWeekdaysChange={setAllowWeekdays} />
             </div>
             <div className="section-column">
               <div className="section-title"><h2>時間帯候補</h2><p>よく使う時間帯を選ぶか、「その他」で自由に追加できます</p></div>
