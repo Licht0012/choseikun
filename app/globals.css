@@ -462,6 +462,38 @@ textarea {
   background: var(--surface-soft);
 }
 
+.calendar-weekday-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+}
+
+.calendar-weekday-toggle input {
+  flex: none;
+  width: 17px;
+  height: 17px;
+  margin: 2px 0 0;
+  accent-color: var(--green);
+}
+
+.calendar-weekday-toggle span {
+  display: grid;
+  gap: 2px;
+}
+
+.calendar-weekday-toggle strong {
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.calendar-weekday-toggle small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
 .calendar-weekdays,
 .calendar-grid {
   display: grid;
@@ -509,6 +541,11 @@ textarea {
 .calendar-day--saturday:not(:disabled) {
   background: var(--blue-soft);
   color: var(--blue);
+}
+
+.calendar-day--weekday:not(:disabled) {
+  background: var(--surface-soft);
+  color: var(--ink);
 }
 
 .calendar-day--sunday:not(:disabled),

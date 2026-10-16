@@ -6,6 +6,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import Skeleton from "react-loading-skeleton";
 import { BrandHeader } from "@/app/components/BrandHeader";
 import { CalendarPicker } from "@/app/components/CalendarPicker";
+import { getCalendarDayKind } from "@/lib/japanese-holidays";
 import { rememberManagedEventToken } from "@/lib/managed-events";
 import { FIXED_TIME_OPTIONS, timeOptionKey, timeOptionLabel } from "@/lib/time-options";
 import type { PublicEventView, TimeOptionInput } from "@/lib/types";
@@ -36,6 +37,7 @@ export function ManageEventApp({ token }: ManageEventAppProps) {
   const [name, setName] = useState("");
   const [memo, setMemo] = useState("");
   const [dates, setDates] = useState<string[]>([]);
+  const [allowWeekdays, setAllowWeekdays] = useState(false);
   const [selectedFixed, setSelectedFixed] = useState<string[]>([]);
   const [customRanges, setCustomRanges] = useState<TimeOptionInput[]>([]);
   const [otherOpen, setOtherOpen] = useState(false);
@@ -84,7 +86,9 @@ export function ManageEventApp({ token }: ManageEventAppProps) {
         setManagement(data.management);
         setName(data.event.name);
         setMemo(data.event.memo);
-        setDates(Array.from(new Set(data.event.slots.map((slot) => slot.date))).sort());
+        const eventDates = Array.from(new Set(data.event.slots.map((slot) => slot.date))).sort();
+        setDates(eventDates);
+        setAllowWeekdays(eventDates.some((date) => getCalendarDayKind(date) === "weekday"));
         setSelectedFixed(ranges.map(timeOptionKey).filter((key) => fixedKeys.has(key)));
         setCustomRanges(custom);
         setOtherOpen(custom.length > 0);
@@ -202,8 +206,8 @@ export function ManageEventApp({ token }: ManageEventAppProps) {
             <textarea id="manage-memo" value={memo} onChange={(formEvent) => setMemo(formEvent.target.value)} maxLength={500} rows={4} />
 
             <div className="manage-schedule-editor">
-              <div className="section-title"><h2>日程候補</h2><p>土日・祝日の追加と削除ができます</p></div>
-              <CalendarPicker selectedDates={dates} onChange={setDates} />
+              <div className="section-title"><h2>日程候補</h2><p>土日・祝日を中心に、平日も追加・削除できます</p></div>
+              <CalendarPicker selectedDates={dates} onChange={setDates} allowWeekdays={allowWeekdays} onAllowWeekdaysChange={setAllowWeekdays} />
 
               <div className="section-title manage-time-heading"><h2>時間帯候補</h2><p>定番の時間帯または自由入力から選べます</p></div>
               <div className="time-option-list">

@@ -101,12 +101,22 @@ test("320px幅でも管理・回答・作成画面がはみ出さないための
   assert.match(css, /@media \(max-width: 360px\)[\s\S]*?\.form-actions \.button/);
 });
 
-test("土日祝の判定と自由時間帯の検証がAPI側にもある", async () => {
-  const [validation, holidays] = await Promise.all([
+test("日程候補は土日祝を初期設定とし、平日も任意で追加できる", async () => {
+  const [calendar, creation, management, validation, holidays] = await Promise.all([
+    read("app/components/CalendarPicker.tsx"),
+    read("app/components/CreateEventApp.tsx"),
+    read("app/components/ManageEventApp.tsx"),
     read("lib/validation.ts"),
     read("lib/japanese-holidays.ts"),
   ]);
-  assert.match(validation, /isSelectableCandidateDate/);
+  assert.match(calendar, /allowWeekdays/);
+  assert.match(calendar, /平日も候補にする/);
+  assert.match(creation, /useState\(false\)/);
+  assert.match(creation, /onAllowWeekdaysChange=\{setAllowWeekdays\}/);
+  assert.match(management, /onAllowWeekdaysChange=\{setAllowWeekdays\}/);
+  assert.match(validation, /isValidCandidateDate/);
+  assert.doesNotMatch(validation, /土日・祝日のみ選べます/);
+  assert.match(holidays, /toDateKey\(parseDateKey\(value\)\) === value/);
   assert.match(validation, /時間帯/);
   assert.match(holidays, /振替休日/);
   assert.match(holidays, /国民の休日/);
