@@ -56,4 +56,5 @@ export interface EventHistoryItem {
   isOpen: boolean;
   shareUrl: string;
   manageUrl: string;
+  token: string;
 }

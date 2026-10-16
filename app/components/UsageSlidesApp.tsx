@@ -102,7 +102,7 @@ export function UsageSlidesApp() {
                 <li><StepBadge>2</StepBadge><div><strong>回答用URLを送る</strong><p>LINEなどで参加メンバーへ共有</p></div></li>
                 <li><StepBadge>3</StepBadge><div><strong>結果を確認する</strong><p>○・△・×が集まった日時から決定</p></div></li>
               </ol>
-              <div className="guide-note-strip"><span aria-hidden="true">✓</span><p><strong>参加メンバーはログイン不要。</strong>受け取ったURLを開けば、そのまま回答できます。</p></div>
+              <div className="guide-note-strip"><span aria-hidden="true">✓</span><p><strong>イベント作成も回答も、すぐに始められます。</strong>参加メンバーは受け取ったURLから回答します。</p></div>
             </div>
           )}
 
@@ -136,7 +136,7 @@ export function UsageSlidesApp() {
                 <div className="guide-url-ticket"><span>参加者用URL</span><code>choseikun… / e / ******</code><button type="button" tabIndex={-1}>コピー</button></div>
                 <div className="guide-member-bubbles" aria-label="参加メンバーへ共有"><i>佐</i><i>鈴</i><i>高</i><i>＋</i></div>
               </div>
-              <div className="guide-note-strip guide-note-strip--warning"><span aria-hidden="true">!</span><p><strong>参加者へ送るのは「回答用URL」だけ。</strong>管理画面URLは主催者だけが保管してください。</p></div>
+              <div className="guide-note-strip guide-note-strip--warning"><span aria-hidden="true">!</span><p><strong>参加者へ送るのは「回答用URL」だけ。</strong>主催者用管理URLは再編集に必要です。ブックマークして、主催者だけで保管してください。</p></div>
             </div>
           )}
 

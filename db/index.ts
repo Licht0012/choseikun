@@ -2,8 +2,6 @@ import { env } from "cloudflare:workers";
 
 export interface AppBindings {
   DB: D1Database;
-  APP_ADMIN_PASSWORD?: string;
-  SESSION_SECRET?: string;
   ACCESS_PEPPER?: string;
   LINE_CHANNEL_SECRET?: string;
   LINE_CHANNEL_ACCESS_TOKEN?: string;

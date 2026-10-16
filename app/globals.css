@@ -1008,6 +1008,7 @@ textarea {
 }
 
 .usage-guide {
+  margin-top: 32px;
   scroll-margin-top: 90px;
   overflow: hidden;
   border: 1px solid var(--line);
@@ -1564,6 +1565,17 @@ textarea {
   margin: 5px 0 0;
 }
 
+.history-note,
+.history-warning {
+  margin: -8px 0 24px;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.history-warning {
+  color: var(--coral);
+}
+
 .history-list {
   display: grid;
   gap: 16px;
@@ -1678,6 +1690,21 @@ textarea {
   min-height: 40px;
   padding: 8px 15px;
   font-size: 12px;
+}
+
+.history-remove {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 12px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.history-remove:hover,
+.history-remove:focus-visible {
+  color: var(--ink);
 }
 
 .history-empty {

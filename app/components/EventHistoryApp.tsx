@@ -5,7 +5,8 @@
 import { useEffect, useState } from "react";
 import Skeleton from "react-loading-skeleton";
 import { BrandHeader } from "@/app/components/BrandHeader";
-import type { EventHistoryItem } from "@/lib/types";
+import { forgetManagedEventToken, readManagedEventTokens } from "@/lib/managed-events";
+import type { EventHistoryItem, PublicEventView } from "@/lib/types";
 
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "short", day: "numeric" }).format(
@@ -25,22 +26,45 @@ function formatCreatedAt(value: string): string {
 
 export function EventHistoryApp() {
   const [events, setEvents] = useState<EventHistoryItem[]>([]);
-  const [state, setState] = useState<"loading" | "ready" | "unauthorized" | "error">("loading");
+  const [state, setState] = useState<"loading" | "ready" | "error">("loading");
+  const [hasLoadError, setHasLoadError] = useState(false);
 
   useEffect(() => {
     let active = true;
-    fetch("/api/events", { cache: "no-store" })
-      .then(async (response) => {
-        if (response.status === 401) return { unauthorized: true };
-        const data = (await response.json()) as { events?: EventHistoryItem[] };
-        if (!response.ok || !data.events) throw new Error("history-load-failed");
-        return { events: data.events };
-      })
-      .then((data) => {
+    const tokens = readManagedEventTokens();
+    if (tokens.length === 0) {
+      setState("ready");
+      return;
+    }
+    Promise.allSettled(tokens.map(async (token): Promise<EventHistoryItem> => {
+      const response = await fetch(`/api/manage/${encodeURIComponent(token)}`, { cache: "no-store" });
+      if (!response.ok) throw new Error("history-load-failed");
+      const data = (await response.json()) as {
+        event?: PublicEventView;
+        management?: { shareUrl: string; manageUrl: string; createdAt: string; updatedAt: string };
+      };
+      if (!data.event || !data.management) throw new Error("history-load-failed");
+      return {
+        id: data.event.id,
+        slug: data.event.slug,
+        name: data.event.name,
+        deadlineDate: data.event.deadlineDate,
+        createdAt: data.management.createdAt,
+        updatedAt: data.management.updatedAt,
+        responseCount: data.event.responses.length,
+        slotCount: data.event.slots.length,
+        isOpen: data.event.isOpen,
+        shareUrl: data.management.shareUrl,
+        manageUrl: data.management.manageUrl,
+        token,
+      };
+    }))
+      .then((results) => {
         if (!active) return;
-        if ("unauthorized" in data) return setState("unauthorized");
-        setEvents(data.events || []);
-        setState("ready");
+        const loaded = results.flatMap((result) => result.status === "fulfilled" ? [result.value] : []);
+        setEvents(loaded);
+        setHasLoadError(loaded.length !== tokens.length);
+        setState(loaded.length === 0 ? "error" : "ready");
       })
       .catch(() => active && setState("error"));
     return () => {
@@ -48,9 +72,9 @@ export function EventHistoryApp() {
     };
   }, []);
 
-  const logout = async () => {
-    await fetch("/api/auth", { method: "DELETE" });
-    window.location.assign("/");
+  const removeFromHistory = (token: string) => {
+    forgetManagedEventToken(token);
+    setEvents((current) => current.filter((event) => event.token !== token));
   };
 
   if (state === "loading") {
@@ -65,38 +89,21 @@ export function EventHistoryApp() {
     );
   }
 
-  if (state === "unauthorized") {
-    return (
-      <>
-        <BrandHeader />
-        <main className="shell shell--auth">
-          <section className="auth-panel">
-            <h1>ログインが必要です</h1>
-            <p>イベント履歴を見るには、主催者としてログインしてください。</p>
-            <a className="button button--primary button--wide" href="/#admin-login">ログイン画面へ</a>
-          </section>
-        </main>
-      </>
-    );
-  }
-
   return (
     <>
-      <BrandHeader
-        actionLabel="ログアウト"
-        onAction={logout}
-        utilityLink={{ label: "イベント作成", href: "/" }}
-      />
+      <BrandHeader utilityLink={{ label: "イベント作成", href: "/" }} />
       <main className="shell history-shell">
         <div className="history-heading">
-          <div><h1>イベント履歴</h1><p>作成したイベントの確認・共有・再編集ができます。</p></div>
+          <div><h1>イベント履歴</h1><p>このブラウザで作成・管理したイベントを表示します。</p></div>
           <a className="button button--primary" href="/">新しいイベントを作成</a>
         </div>
+        <p className="history-note">別の端末では主催者用管理URLを開くと、その端末の履歴にも追加されます。ブラウザのデータを消しても、保管した管理URLから再編集できます。</p>
+        {hasLoadError && state === "ready" ? <p className="history-warning" role="status">一部の履歴を読み込めませんでした。時間をおいて再度開いてください。</p> : null}
 
         {state === "error" ? (
           <section className="history-empty"><h2>履歴を読み込めませんでした</h2><p>時間をおいて、もう一度開いてください。</p></section>
         ) : events.length === 0 ? (
-          <section className="history-empty"><h2>まだイベントがありません</h2><p>最初のイベントを作成すると、ここから再編集できます。</p></section>
+          <section className="history-empty"><h2>まだイベントがありません</h2><p>イベントを作成するか、保管した主催者用管理URLを開くと、ここに表示されます。</p></section>
         ) : (
           <section className="history-list" aria-label="作成済みイベント">
             {events.map((event) => (
@@ -119,6 +126,7 @@ export function EventHistoryApp() {
                 <div className="history-item__actions">
                   <a className="button button--secondary" href={event.shareUrl} aria-label={`${event.name}の回答画面を開く`}>回答画面</a>
                   <a className="button button--primary" href={event.manageUrl} aria-label={`${event.name}を再編集する`}>再編集する</a>
+                  <button className="history-remove" type="button" onClick={() => removeFromHistory(event.token)} aria-label={`${event.name}をこのブラウザの履歴から外す`}>履歴から外す</button>
                 </div>
               </article>
             ))}

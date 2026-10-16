@@ -19,17 +19,21 @@ test("イベント作成画面に必須の入力項目が揃っている", async
 });
 
 test("作成者がイベント履歴からイベント名と候補日時を再編集できる", async () => {
-  const [history, historyApi, manage, manageApi, editor] = await Promise.all([
+  const [history, creationApi, manage, manageApi, editor, storage] = await Promise.all([
     read("app/components/EventHistoryApp.tsx"),
     read("app/api/events/route.ts"),
     read("app/components/ManageEventApp.tsx"),
-    read("app/api/manage/event/[slug]/route.ts"),
+    read("app/api/manage/[token]/route.ts"),
     read("lib/event-editor.ts"),
+    read("lib/managed-events.ts"),
   ]);
   assert.match(history, /イベント履歴/);
   assert.match(history, /再編集する/);
-  assert.match(historyApi, /isAdminRequest/);
-  assert.match(historyApi, /manageUrl/);
+  assert.match(history, /readManagedEventTokens/);
+  assert.match(history, /履歴から外す/);
+  assert.doesNotMatch(creationApi, /export async function GET|isAdminRequest/);
+  assert.match(creationApi, /manageUrl/);
+  assert.match(storage, /localStorage/);
   for (const text of ["イベント名", "日程候補", "時間帯候補", "変更を保存"]) {
     assert.match(manage, new RegExp(text));
   }
@@ -108,17 +112,19 @@ test("土日祝の判定と自由時間帯の検証がAPI側にもある", async
   assert.match(holidays, /国民の休日/);
 });
 
-test("回答・LINEリマインド・管理者アクセス制御の経路が実装されている", async () => {
-  const [responses, reminder, webhook, security] = await Promise.all([
+test("回答・LINEリマインド・イベント別管理URLの経路が実装されている", async () => {
+  const [responses, reminder, webhook, manageApi, security] = await Promise.all([
     read("app/api/events/[slug]/responses/route.ts"),
     read("app/api/reminders/run/route.ts"),
     read("app/api/line/webhook/route.ts"),
+    read("app/api/manage/[token]/route.ts"),
     read("lib/security.ts"),
   ]);
   assert.match(responses, /availability/);
   assert.match(reminder, /message\/push/);
   assert.match(webhook, /x-line-signature/);
-  assert.match(security, /SameSite=Lax/);
+  assert.match(manageApi, /findEventByAdminToken/);
+  assert.match(security, /digestSecret/);
 });
 
 test("参加者画面とAPIに合言葉の認証処理が残っていない", async () => {

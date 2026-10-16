@@ -6,15 +6,17 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import Skeleton from "react-loading-skeleton";
 import { BrandHeader } from "@/app/components/BrandHeader";
 import { CalendarPicker } from "@/app/components/CalendarPicker";
+import { rememberManagedEventToken } from "@/lib/managed-events";
 import { FIXED_TIME_OPTIONS, timeOptionKey, timeOptionLabel } from "@/lib/time-options";
 import type { PublicEventView, TimeOptionInput } from "@/lib/types";
 
 interface ManageEventAppProps {
-  access: { type: "token" | "admin"; value: string };
+  token: string;
 }
 
 interface ManagementData {
   shareUrl: string;
+  manageUrl: string;
   lineGroupName: string | null;
   lineConnected: boolean;
   reminderSentAt: string | null;
@@ -26,13 +28,11 @@ interface LineCodeData {
   command: string;
 }
 
-export function ManageEventApp({ access }: ManageEventAppProps) {
-  const endpoint = access.type === "token"
-    ? `/api/manage/${encodeURIComponent(access.value)}`
-    : `/api/manage/event/${encodeURIComponent(access.value)}`;
+export function ManageEventApp({ token }: ManageEventAppProps) {
+  const endpoint = `/api/manage/${encodeURIComponent(token)}`;
   const [event, setEvent] = useState<PublicEventView | null>(null);
   const [management, setManagement] = useState<ManagementData | null>(null);
-  const [state, setState] = useState<"loading" | "ready" | "missing" | "unauthorized">("loading");
+  const [state, setState] = useState<"loading" | "ready" | "missing">("loading");
   const [name, setName] = useState("");
   const [memo, setMemo] = useState("");
   const [dates, setDates] = useState<string[]>([]);
@@ -61,7 +61,6 @@ export function ManageEventApp({ access }: ManageEventAppProps) {
     let active = true;
     fetch(endpoint, { cache: "no-store" })
       .then(async (response) => {
-        if (response.status === 401) return { unauthorized: true };
         if (response.status === 404) return { missing: true };
         const data = (await response.json()) as { event?: PublicEventView; management?: ManagementData };
         if (!response.ok || !data.event || !data.management) return { missing: true };
@@ -69,8 +68,8 @@ export function ManageEventApp({ access }: ManageEventAppProps) {
       })
       .then((data) => {
         if (!active) return;
-        if ("unauthorized" in data) return setState("unauthorized");
         if ("missing" in data || !data.event || !data.management) return setState("missing");
+        rememberManagedEventToken(token);
         const ranges = Array.from(
           new Map(
             data.event.slots.map((slot) => [
@@ -97,7 +96,7 @@ export function ManageEventApp({ access }: ManageEventAppProps) {
     return () => {
       active = false;
     };
-  }, [endpoint]);
+  }, [endpoint, token]);
 
   useEffect(() => {
     if (!deleteImpact) return;
@@ -181,17 +180,8 @@ export function ManageEventApp({ access }: ManageEventAppProps) {
     window.setTimeout(() => setNotice(""), 3000);
   };
 
-  const handleLogout = async () => {
-    await fetch("/api/auth", { method: "DELETE" });
-    window.location.assign("/");
-  };
-
   if (state === "loading") {
     return <><BrandHeader /><main className="shell manage-shell loading-shell"><Skeleton height={38} width="42%" /><Skeleton height={500} borderRadius={14} style={{ marginTop: 28 }} /></main></>;
-  }
-
-  if (state === "unauthorized") {
-    return <><BrandHeader /><main className="shell shell--auth"><section className="auth-panel"><h1>ログインが必要です</h1><p>イベントを再編集するには、主催者としてログインしてください。</p><a className="button button--primary button--wide" href="/#admin-login">ログイン画面へ</a></section></main></>;
   }
 
   if (state === "missing" || !event || !management) {
@@ -200,11 +190,7 @@ export function ManageEventApp({ access }: ManageEventAppProps) {
 
   return (
     <>
-      <BrandHeader
-        actionLabel={access.type === "admin" ? "ログアウト" : undefined}
-        onAction={access.type === "admin" ? handleLogout : undefined}
-        utilityLink={access.type === "admin" ? { label: "イベント履歴", href: "/history" } : undefined}
-      />
+      <BrandHeader utilityLink={{ label: "イベント履歴", href: "/history" }} />
       <main className="shell manage-shell">
         <div className="manage-heading"><div><h1>イベント管理</h1><p>イベント情報・候補日時の再編集、共有、LINE連携をここで行えます。</p></div><a className="button button--secondary" href={management.shareUrl}>回答画面を確認</a></div>
         <div className="manage-grid">
@@ -269,7 +255,8 @@ export function ManageEventApp({ access }: ManageEventAppProps) {
             <section className="manage-panel">
               <div className="section-title"><h2>参加者へ共有</h2><p>回答用URLをLINEグループへ送ってください</p></div>
               <div className="share-block"><label>参加者用URL</label><div><code>{management.shareUrl}</code><button type="button" onClick={() => copy(management.shareUrl, "参加者用URLをコピーしました。")}>コピー</button></div></div>
-              <p className="security-note">管理画面のURLは主催者専用です。参加者には回答用URLだけを共有してください。</p>
+              <div className="share-block"><label>主催者用管理URL</label><div><code>{management.manageUrl}</code><button type="button" onClick={() => copy(management.manageUrl, "主催者用管理URLをコピーしました。")}>コピー</button></div></div>
+              <p className="security-note">主催者用管理URLはブックマークするなど大切に保管し、参加者には回答用URLだけを共有してください。</p>
             </section>
 
             <section className="manage-panel line-connect-panel">

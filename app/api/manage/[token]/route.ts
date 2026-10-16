@@ -12,9 +12,12 @@ export async function GET(request: Request, context: { params: Promise<{ token: 
     event: await buildPublicEvent(event),
     management: {
       shareUrl: `${absoluteBaseUrl(request)}/e/${event.slug}`,
+      manageUrl: `${absoluteBaseUrl(request)}/manage/${token}`,
       lineGroupName: event.line_group_name,
       lineConnected: Boolean(event.line_group_id),
       reminderSentAt: event.reminder_sent_at,
+      createdAt: event.created_at,
+      updatedAt: event.updated_at,
     },
   });
 }

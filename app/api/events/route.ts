@@ -1,40 +1,14 @@
 import { getDb } from "@/db";
-import { listEventHistory } from "@/lib/event-data";
 import { absoluteBaseUrl, jsonResponse, readJson } from "@/lib/http";
-import { digestSecret, isAdminRequest, randomToken } from "@/lib/security";
+import { digestSecret, randomToken } from "@/lib/security";
 import type { CreateEventInput } from "@/lib/types";
-import { isResponseOpen, validateCreateEvent } from "@/lib/validation";
+import { validateCreateEvent } from "@/lib/validation";
 
 function createSlug(): string {
   return randomToken(9).replace(/[^a-zA-Z0-9]/g, "").toLowerCase().slice(0, 12);
 }
 
-export async function GET(request: Request) {
-  if (!(await isAdminRequest(request))) {
-    return jsonResponse({ error: "管理者としてログインしてください。" }, 401);
-  }
-  const baseUrl = absoluteBaseUrl(request);
-  const events = (await listEventHistory()).map((event) => ({
-    id: event.id,
-    slug: event.slug,
-    name: event.name,
-    deadlineDate: event.deadline_date,
-    createdAt: event.created_at,
-    updatedAt: event.updated_at,
-    responseCount: event.response_count,
-    slotCount: event.slot_count,
-    isOpen: isResponseOpen(event.deadline_date),
-    shareUrl: `${baseUrl}/e/${event.slug}`,
-    manageUrl: `${baseUrl}/manage/event/${event.slug}`,
-  }));
-  return jsonResponse({ events });
-}
-
 export async function POST(request: Request) {
-  if (!(await isAdminRequest(request))) {
-    return jsonResponse({ error: "管理者としてログインしてください。" }, 401);
-  }
-
   const validation = validateCreateEvent(await readJson<CreateEventInput>(request));
   if (!validation.value) return jsonResponse({ error: validation.error }, 400);
   const input = validation.value;

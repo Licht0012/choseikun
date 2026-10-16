@@ -1,10 +1,10 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import Skeleton from "react-loading-skeleton";
 import { BrandHeader } from "@/app/components/BrandHeader";
 import { CalendarPicker } from "@/app/components/CalendarPicker";
 import { addDays, toDateKey } from "@/lib/japanese-holidays";
+import { rememberManagedEventToken, tokenFromManageUrl } from "@/lib/managed-events";
 import { FIXED_TIME_OPTIONS, timeOptionKey, timeOptionLabel } from "@/lib/time-options";
 import type { CreateEventInput, TimeOptionInput } from "@/lib/types";
 
@@ -71,8 +71,6 @@ function UsageGuide() {
 }
 
 export function CreateEventApp() {
-  const [authState, setAuthState] = useState<"loading" | "logged-out" | "logged-in">("loading");
-  const [adminPassword, setAdminPassword] = useState("");
   const [name, setName] = useState("");
   const [memo, setMemo] = useState("");
   const [dates, setDates] = useState<string[]>([]);
@@ -107,38 +105,13 @@ export function CreateEventApp() {
   }, []);
 
   useEffect(() => {
-    fetch("/api/auth", { cache: "no-store" })
-      .then((response) => response.json() as Promise<{ authenticated?: boolean }>)
-      .then((data) => {
-        setAuthState(data.authenticated ? "logged-in" : "logged-out");
-        if (data.authenticated) loadDraft();
-      })
-      .catch(() => setAuthState("logged-out"));
+    loadDraft();
   }, [loadDraft]);
 
   const selectedTimeOptions = useMemo(
     () => [...fixedRanges.filter((range) => selectedFixed.includes(rangeKey(range))), ...customRanges],
     [customRanges, selectedFixed],
   );
-
-  const handleLogin = async (event: FormEvent) => {
-    event.preventDefault();
-    setError("");
-    const response = await fetch("/api/auth", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ password: adminPassword }),
-    });
-    const data = (await response.json()) as { error?: string };
-    if (!response.ok) return setError(data.error || "ログインできませんでした。");
-    setAdminPassword("");
-    setAuthState("logged-in");
-  };
-
-  const handleLogout = async () => {
-    await fetch("/api/auth", { method: "DELETE" });
-    setAuthState("logged-out");
-  };
 
   const toggleFixedRange = (range: TimeOptionInput) => {
     const key = rangeKey(range);
@@ -193,6 +166,8 @@ export function CreateEventApp() {
     setSubmitting(false);
     if (!response.ok || !data.event) return setError(data.error || "イベントを作成できませんでした。");
     localStorage.removeItem("choseikun-event-draft");
+    const token = tokenFromManageUrl(data.event.manageUrl);
+    if (token) rememberManagedEventToken(token);
     setCreated(data.event);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -203,45 +178,10 @@ export function CreateEventApp() {
     window.setTimeout(() => setNotice(""), 3000);
   };
 
-  if (authState === "loading") {
-    return (
-      <>
-        <BrandHeader />
-        <main className="shell shell--narrow loading-shell" aria-label="読み込み中">
-          <Skeleton height={40} width="48%" />
-          <Skeleton height={420} borderRadius={14} style={{ marginTop: 32 }} />
-        </main>
-      </>
-    );
-  }
-
-  if (authState === "logged-out") {
-    return (
-      <>
-        <BrandHeader />
-        <main className="shell auth-page">
-          <section className="auth-panel" id="admin-login">
-            <div className="auth-mark" aria-hidden="true">調</div>
-            <h1>主催者ログイン</h1>
-            <p>イベントを作る方だけが使う管理画面です。</p>
-            <form onSubmit={handleLogin}>
-              <label className="field-label" htmlFor="admin-password">管理者パスワード</label>
-              <input id="admin-password" type="password" value={adminPassword} onChange={(event) => setAdminPassword(event.target.value)} autoComplete="current-password" required />
-              {error && <p className="form-error" role="alert">{error}</p>}
-              <button className="button button--primary button--wide" type="submit">ログイン</button>
-            </form>
-          </section>
-          <UsageGuide />
-        </main>
-        <footer className="site-footer">© 調整くん</footer>
-      </>
-    );
-  }
-
   if (created) {
     return (
       <>
-        <BrandHeader actionLabel="ログアウト" onAction={handleLogout} utilityLink={{ label: "イベント履歴", href: "/history" }} />
+        <BrandHeader utilityLink={{ label: "イベント履歴", href: "/history" }} />
         <main className="shell shell--narrow">
           <section className="success-panel">
             <span className="success-check" aria-hidden="true">✓</span>
@@ -251,6 +191,11 @@ export function CreateEventApp() {
               <label>参加者用URL</label>
               <div><code>{created.shareUrl}</code><button type="button" onClick={() => copyText(created.shareUrl, "参加者用URLをコピーしました。")}>コピー</button></div>
             </div>
+            <div className="share-block">
+              <label>主催者用管理URL</label>
+              <div><code>{created.manageUrl}</code><button type="button" onClick={() => copyText(created.manageUrl, "主催者用管理URLをコピーしました。")}>コピー</button></div>
+            </div>
+            <p className="security-note">主催者用管理URLはブックマークするなど大切に保管し、参加者には共有しないでください。</p>
             <div className="success-line-guide">
               <div className="usage-line-guide__title">
                 <span className="line-symbol" aria-hidden="true">LINE</span>
@@ -266,7 +211,6 @@ export function CreateEventApp() {
               <a className="button button--primary" href={created.manageUrl}>管理画面でLINEを連携</a>
               <a className="button button--secondary" href={created.shareUrl}>回答画面を確認</a>
             </div>
-            <p className="security-note">管理画面のURLは主催者専用です。参加者には送らないでください。</p>
           </section>
           {notice && <div className="toast" role="status">{notice}</div>}
         </main>
@@ -276,7 +220,7 @@ export function CreateEventApp() {
 
   return (
     <>
-      <BrandHeader actionLabel="ログアウト" onAction={handleLogout} utilityLink={{ label: "イベント履歴", href: "/history" }} />
+      <BrandHeader utilityLink={{ label: "イベント履歴", href: "/history" }} />
       <main className="shell create-shell">
         <div className="page-heading">
           <h1>イベントを作成</h1>
@@ -360,6 +304,7 @@ export function CreateEventApp() {
             <button className="button button--primary" type="submit" disabled={submitting}>{submitting ? "作成中…" : "イベントを作成"}</button>
           </div>
         </form>
+        <UsageGuide />
       </main>
       <footer className="site-footer">© 調整くん</footer>
       {notice && <div className="toast" role="status">{notice}</div>}
