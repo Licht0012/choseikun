@@ -40,6 +40,7 @@ export async function POST(request: Request) {
       `SELECT id, slug, name, deadline_date, line_group_id
        FROM events
        WHERE deadline_date = ? AND reminder_enabled = 1
+         AND NOT EXISTS (SELECT 1 FROM monthly_events m WHERE m.event_id = events.id)
          AND line_group_id IS NOT NULL AND reminder_sent_at IS NULL`,
     )
     .bind(targetDate)

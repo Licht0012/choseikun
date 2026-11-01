@@ -1,3 +1,4 @@
+import { monthlySchemaStatements } from "./20261101_monthly-schema";
 import { env } from "cloudflare:workers";
 
 export interface AppBindings {
@@ -7,9 +8,12 @@ export interface AppBindings {
   LINE_CHANNEL_ACCESS_TOKEN?: string;
   REMINDER_CRON_SECRET?: string;
   PUBLIC_BASE_URL?: string;
+  MONTHLY_LINE_GROUP_ID?: string;
+  MONTHLY_ENABLED?: string;
 }
 
 const schemaStatements = [
+  // Monthly tables are appended below after the existing parent tables.
   `CREATE TABLE IF NOT EXISTS events (
     id TEXT PRIMARY KEY NOT NULL,
     slug TEXT NOT NULL UNIQUE,
@@ -97,7 +101,7 @@ export async function getDb(): Promise<D1Database> {
 
   if (!schemaReady) {
     schemaReady = bindings.DB
-      .batch(schemaStatements.map((statement) => bindings.DB.prepare(statement)))
+      .batch([...schemaStatements, ...monthlySchemaStatements].map((statement) => bindings.DB.prepare(statement)))
       .then(() => undefined)
       .catch((error: unknown) => {
         schemaReady = null;

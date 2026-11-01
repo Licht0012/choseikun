@@ -37,6 +37,8 @@ export interface PublicEventView {
   name: string;
   memo: string;
   deadlineDate: string;
+  monthly?: { targetMonth: string };
+  candidates?: SlotView[];
   reminderEnabled: boolean;
   lineConnected: boolean;
   isOpen: boolean;

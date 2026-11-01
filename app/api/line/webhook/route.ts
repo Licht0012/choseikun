@@ -64,6 +64,14 @@ export async function POST(request: Request) {
     const text = event.message?.type === "text" ? event.message.text?.normalize("NFKC").trim() || "" : "";
     const match = text.match(/^調整くん\s+連携\s+([A-Z2-9]{6})$/i);
     const groupId = event.source?.type === "group" ? event.source.groupId : undefined;
+    if (groupId && groupId === bindings.MONTHLY_LINE_GROUP_ID) {
+      if (event.type === "leave") {
+        await db.prepare("INSERT OR REPLACE INTO monthly_settings(key,value) VALUES ('group_left',?)").bind(groupId).run();
+        await db.prepare("INSERT INTO monthly_errors(id,kind,message,created_at) VALUES (?,?,?,?)").bind(crypto.randomUUID(),"group_left","Botが設定先グループから退出しました",new Date().toISOString()).run();
+      } else if (event.type === "join") {
+        await db.prepare("DELETE FROM monthly_settings WHERE key='group_left'").run();
+      }
+    }
     if (!match || !groupId || !event.replyToken) continue;
 
     const linkCodeHash = await digestSecret(match[1].toUpperCase());

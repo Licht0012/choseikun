@@ -1,3 +1,4 @@
+import { MEMBERS, selectCandidates } from "./20261101_monthly-rules";
 import { getDb } from "@/db";
 import { digestSecret } from "@/lib/security";
 import type { AvailabilityStatus, PublicEventView, ResponseView, SlotView } from "@/lib/types";
@@ -92,7 +93,10 @@ export async function buildPublicEvent(event: EventRecord): Promise<PublicEventV
     updatedAt: row.updated_at,
   }));
 
+  const monthly = await db.prepare("SELECT target_month FROM monthly_events WHERE event_id=?").bind(event.id).first<{target_month:string}>();
+  if (monthly) responses.sort((a,b) => MEMBERS.indexOf(a.name as typeof MEMBERS[number])-MEMBERS.indexOf(b.name as typeof MEMBERS[number]));
   return {
+    ...(monthly ? {monthly:{targetMonth:monthly.target_month},candidates:selectCandidates(slots,responses)} : {}),
     id: event.id,
     slug: event.slug,
     name: event.name,

@@ -13,6 +13,10 @@ const isCodexSeatbeltSandbox = process.env.CODEX_SANDBOX === "seatbelt";
 
 const localBindingConfig = {
   main: "./worker/index.ts",
+  name: "choseikun",
+  keep_vars: true,
+  vars: { PUBLIC_BASE_URL: "https://choseikun.luna-lab.workers.dev" },
+  triggers: { crons: ["* * * * *"] },
   compatibility_flags: ["nodejs_compat"],
   d1_databases: d1
     ? [

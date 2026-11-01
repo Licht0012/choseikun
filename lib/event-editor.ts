@@ -1,3 +1,4 @@
+import { monthlyInfo } from "@/lib/20261101_monthly-automation";
 import { getDb } from "@/db";
 import type { EventRecord } from "@/lib/event-data";
 import type { CreateEventInput } from "@/lib/types";
@@ -23,6 +24,7 @@ interface SlotRow {
 }
 
 export async function updateEventConfiguration(event: EventRecord, input: CreateEventInput): Promise<void> {
+  if (await monthlyInfo(event.id)) throw new Error("自動生成ページの候補日時は変更できません。");
   const db = await getDb();
   const [dateResult, timeResult, slotResult] = await Promise.all([
     db

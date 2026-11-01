@@ -4,6 +4,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import Skeleton from "react-loading-skeleton";
+import { MonthlyResponseTable } from "./20261101_MonthlyResponseTable";
 import { BrandHeader } from "@/app/components/BrandHeader";
 import { getCalendarDayKind, parseDateKey } from "@/lib/japanese-holidays";
 import type { AvailabilityStatus, PublicEventView, SlotView } from "@/lib/types";
@@ -164,6 +165,7 @@ export function EventResponseApp({ slug }: EventResponseAppProps) {
           </div>
         </section>
 
+        {event.monthly ? <MonthlyResponseTable event={event} /> : <>
         <form onSubmit={submitResponse}>
           <section className="answer-section">
             <h2>あなたの回答</h2>
@@ -233,6 +235,7 @@ export function EventResponseApp({ slug }: EventResponseAppProps) {
           )}
           {event.responses.some((response) => response.comment) && <div className="comment-list">{event.responses.filter((response) => response.comment).map((response) => <p key={response.id}><strong>{response.name}</strong>{response.comment}</p>)}</div>}
         </section>
+        </>}
       </main>
       <footer className="site-footer">© 調整くん</footer>
     </>

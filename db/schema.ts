@@ -99,3 +99,35 @@ export const availability = sqliteTable(
     index("availability_slot_idx").on(table.slotId),
   ],
 );
+
+
+// Additive metadata for monthly automation; regular events use existing tables.
+export const monthlyEvents = sqliteTable("monthly_events", {
+  eventId: text("event_id").primaryKey().references(() => events.id),
+  targetMonth: text("target_month").notNull().unique(),
+  createdMonth: text("created_month").notNull(),
+  holidayCsv: text("holiday_csv").notNull(),
+  createdAt: text("created_at").notNull(),
+});
+export const monthlyNotifications = sqliteTable("monthly_notifications", {
+  id: text("id").primaryKey(),
+  eventId: text("event_id").notNull().references(() => monthlyEvents.eventId),
+  kind: text("kind", {enum:["created","reminder","final","provisional"]}).notNull(),
+  payload: text("payload").notNull(),
+  retryKey: text("retry_key").notNull().unique(),
+  createdAt: text("created_at").notNull(),
+  firstAttemptAt: text("first_attempt_at"),
+  leaseUntil: text("lease_until"),
+  leaseOwner: text("lease_owner"),
+  sentAt: text("sent_at"),
+  attempts: integer("attempts").notNull().default(0),
+  nextAttemptAt: text("next_attempt_at"),
+  blocked: integer("blocked").notNull().default(0),
+}, table => [uniqueIndex("monthly_notifications_event_kind").on(table.eventId,table.kind)]);
+export const monthlyErrors = sqliteTable("monthly_errors", {
+  id: text("id").primaryKey(), eventId: text("event_id"), kind: text("kind").notNull(),
+  message: text("message").notNull(), createdAt: text("created_at").notNull(),
+});
+export const monthlySettings = sqliteTable("monthly_settings", {
+  key: text("key").primaryKey(), value: text("value").notNull(),
+});

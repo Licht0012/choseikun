@@ -1,3 +1,5 @@
+import { monthlyInfo } from "@/lib/20261101_monthly-automation";
+import { saveMonthlyResponse } from "@/lib/20261101_monthly-response";
 import { getDb } from "@/db";
 import { buildPublicEvent, findEventBySlug } from "@/lib/event-data";
 import { jsonResponse, readJson } from "@/lib/http";
@@ -47,6 +49,7 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
   if (!isResponseOpen(event.deadline_date)) return jsonResponse({ error: "回答期限を過ぎています。" }, 409);
 
   const body = await readJson<ResponseInput>(request);
+  if (await monthlyInfo(event.id)) return saveMonthlyResponse(event, body);
   const name = cleanText(body?.name, 40);
   const comment = cleanText(body?.comment, 300);
   if (!name) return jsonResponse({ error: "お名前を入力してください。" }, 400);
