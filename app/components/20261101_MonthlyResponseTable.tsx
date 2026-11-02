@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { PublicEventView, AvailabilityStatus, ResponseView } from "@/lib/types";
 import { slotLabel } from "@/lib/20261101_monthly-rules";
 
@@ -9,6 +9,19 @@ export function MonthlyResponseTable({event:initial}: {event:PublicEventView}) {
   const [busy,setBusy] = useState<string | null>(null);
   const [error,setError] = useState("");
   const [message,setMessage] = useState("");
+  useEffect(() => {
+    if (!event.isOpen || !event.monthly?.deadlineAt) return;
+    const close = () => setEvent(current => ({...current,isOpen:false}));
+    const deadline = Date.parse(event.monthly.deadlineAt);
+    let timer: ReturnType<typeof setTimeout>;
+    const check = () => {
+      const remaining = deadline - Date.now();
+      if (remaining <= 0) close();
+      else timer = setTimeout(check, Math.min(remaining, 2147483647));
+    };
+    check();
+    return () => clearTimeout(timer);
+  }, [event.isOpen, event.monthly?.deadlineAt]);
   function update(response:ResponseView, patch:Partial<ResponseView>) {
     setDrafts(current => ({...current,[response.id]:{...(current[response.id] || response),...patch}}));
     setMessage("");

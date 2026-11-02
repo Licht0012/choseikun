@@ -160,7 +160,7 @@ export function EventResponseApp({ slug }: EventResponseAppProps) {
           <h1>{event.name}</h1>
           {event.memo && <p>{event.memo}</p>}
           <div className="event-meta">
-            <span>▣ 回答期限 {deadlineLabel(event.deadlineDate)}</span>
+            <span>▣ 回答期限 {event.monthly?.deadlineAt ? `${formatDate(event.deadlineDate)} ${event.monthly.deadlineAt.slice(11,16)}` : deadlineLabel(event.deadlineDate)}</span>
             {event.reminderEnabled && event.lineConnected && <span className="line-status">● LINEリマインド設定済み</span>}
           </div>
         </section>

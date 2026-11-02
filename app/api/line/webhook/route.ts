@@ -100,7 +100,9 @@ export async function POST(request: Request) {
       .run();
     await replyMessage(
       event.replyToken,
-      `「${linkedEvent.name}」とこのグループを連携しました。回答期限の前日19:00にお知らせします。`,
+      (await db.prepare("SELECT event_id FROM monthly_events WHERE event_id=?").bind(linkedEvent.id).first())
+        ? `「${linkedEvent.name}」とこのグループを連携しました。設定した配信日時に日程調整ページをお知らせします。`
+        : `「${linkedEvent.name}」とこのグループを連携しました。回答期限の前日19:00にお知らせします。`,
       accessToken,
     );
   }

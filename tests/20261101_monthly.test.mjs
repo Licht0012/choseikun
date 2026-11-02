@@ -18,7 +18,7 @@ function load(path, overrides = {}) {
     if (id.startsWith('@/')) return load(id.slice(2)+(id==='@/db'?'/index.ts':'.ts'), overrides);
     if (id.startsWith('.')) return load(relative(new URL('../',import.meta.url).pathname,new URL(id+'.ts',`file://${filename}`).pathname),overrides);
     return require(id);
-  },Date,Set,Map,Intl,TextDecoder,TextEncoder,crypto,fetch:(...args)=>fakeFetch(...args),AbortSignal,console,Response,Request,Headers,btoa});
+  },Date:overrides.__Date || Date,Set,Map,Intl,TextDecoder,TextEncoder,crypto,fetch:(...args)=>fakeFetch(...args),AbortSignal,console,Response,Request,Headers,btoa});
   return module.exports;
 }
 let fakeFetch;
@@ -63,9 +63,11 @@ function harness() {
   sqlite.exec(readFileSync(new URL('../drizzle/20261101_monthly-automation.sql',import.meta.url),'utf8'));
   const db={prepare(sql){const stmt=sqlite.prepare(sql); let args=[];return {bind(...values){args=values;return this;},async first(){return stmt.get(...args)||null;},async all(){return {results:stmt.all(...args)};},async run(){return {meta:{changes:Number(stmt.run(...args).changes)}};}};},async batch(stmts){sqlite.exec('BEGIN');try{const result=[];for(const stmt of stmts)result.push(await stmt.run());sqlite.exec('COMMIT');return result;}catch(e){sqlite.exec('ROLLBACK');throw e;}}};
   const env={MONTHLY_ENABLED:'true',MONTHLY_LINE_GROUP_ID:'C'+'a'.repeat(32),PUBLIC_BASE_URL:'https://example.test',LINE_CHANNEL_ACCESS_TOKEN:'test'};
-  const overrides={'@/db':{getDb:async()=>db,getBindings:()=>env},'@/lib/security':{digestSecret:async s=>s,randomToken:n=>crypto.randomUUID().replaceAll('-','').slice(0,n)}};
+  const clock={now:Date.parse('2026-11-16T00:00:00Z')};
+  class TestDate extends Date {constructor(value){super(value===undefined ? clock.now : value);}static now(){return clock.now;}}
+  const overrides={__Date:TestDate,'@/db':{getDb:async()=>db,getBindings:()=>env},'@/lib/security':{digestSecret:async s=>s,randomToken:n=>crypto.randomUUID().replaceAll('-','').slice(0,n)}};
   const automation=load('lib/20261101_monthly-automation.ts',overrides);
-  return {sqlite,db,env,automation,overrides};
+  return {sqlite,db,env,automation,overrides,clock};
 }
 const holidayCsv=Array.from({length:16},(_,i)=>`2027/${Math.floor(i/2)+1}/${i%2+10},holiday`).join('\n');
 test('D1統合:生成3時間帯×候補日・6人未入力・重複Cron・15/17/18通知・再試行キー',async()=>{
@@ -82,8 +84,8 @@ test('D1統合:生成3時間帯×候補日・6人未入力・重複Cron・15/17/
   assert.equal(sqlite.prepare('SELECT count(*) n FROM slots').get().n,dates*3);
   assert.equal(pushes.length,1);assert.match(pushes[0].messages[0].text,/2027年01月/);assert.match(pushes[0].messages[0].text,/11月18日/);
   await automation.runMonthly(new Date('2026-11-17T10:00:00Z'));
-  await automation.runMonthly(new Date('2026-11-18T14:59:00Z'));
-  assert.equal(pushes.length,3);assert.match(pushes[1].messages[0].text,/明日/);assert.match(pushes[2].messages[0].text,/暫定結果/);
+  await automation.runMonthly(new Date('2026-11-18T10:00:00Z'));
+  assert.equal(pushes.length,3);assert.match(pushes[1].messages[0].text,/11月18日 19:00/);assert.match(pushes[2].messages[0].text,/暫定結果/);
   const id=sqlite.prepare('SELECT id FROM events').get().id;
   await automation.enqueue(id,'final','final result');let keys=[];let failure=true;
   fakeFetch=async(_url,options)=>{keys.push(options.headers['X-Line-Retry-Key']);if(failure)throw new Error('test network failure');return new Response('{}');};
@@ -128,7 +130,7 @@ test('D1統合:全員完了ならリマインド・暫定なし、409受理済�
   await automation.runMonthly(new Date('2026-11-15T10:00:00Z'));
   sqlite.exec("INSERT INTO availability(response_id,slot_id,status) SELECT r.id,s.id,'yes' FROM responses r JOIN slots s ON s.event_id=r.event_id");
   await automation.runMonthly(new Date('2026-11-17T10:00:00Z'));
-  await automation.runMonthly(new Date('2026-11-18T14:59:00Z'));
+  await automation.runMonthly(new Date('2026-11-18T10:00:00Z'));
   assert.equal(sent,2);
   assert.equal(sqlite.prepare("SELECT count(*) n FROM monthly_notifications WHERE kind IN ('reminder','provisional')").get().n,0);
   sqlite.exec("UPDATE monthly_notifications SET sent_at=NULL WHERE kind='final'");
@@ -186,4 +188,61 @@ test('本番起動と同じスキーマ定義をD1相当の単文で初期化で
     sqlite.prepare(sql).run();
   }
   assert(sqlite.prepare("SELECT name FROM sqlite_master WHERE name='monthly_events'").get());
+});
+
+
+test('12月特例・通常19時締切・年またぎ・締切瞬間の判定',()=>{
+  const schedule=load('lib/20261102_monthly-schedule.ts');
+  assert.deepEqual(JSON.parse(JSON.stringify(schedule.monthlySchedule('2026-12'))),{publishAt:'2026-11-04T20:00:00+09:00',reminderAt:'2026-11-06T19:00:00+09:00',deadlineAt:'2026-11-07T18:00:00+09:00'});
+  assert.equal(schedule.monthlySchedule('2027-01').publishAt,'2026-11-15T19:00:00+09:00');
+  assert.equal(schedule.monthlySchedule('2027-01').deadlineAt,'2026-11-18T19:00:00+09:00');
+  assert.equal(schedule.monthlySchedule('2027-02').reminderAt,'2026-12-17T19:00:00+09:00');
+  assert.equal(schedule.monthlySchedule('demo:2026-12'),null);
+  for(const [month,date,before,at] of [['2026-12','2026-11-07','2026-11-07T08:59:59.999Z','2026-11-07T09:00:00Z'],['2027-01','2026-11-18','2026-11-18T09:59:59.999Z','2026-11-18T10:00:00Z']]){
+    assert(schedule.monthlyResponseOpen(month,date,new Date(before)));
+    assert.equal(schedule.monthlyResponseOpen(month,date,new Date(at)),false);
+  }
+});
+
+test('12月特例D1:事前準備で配信せず、11/4・6・7の境界・通常1月分と独立・宛先分離',async()=>{
+  const {sqlite,automation,env}=harness();let pushes=[];
+  const official=readFileSync(new URL('./fixtures/20261101_official-holidays.csv',import.meta.url),'utf8');
+  fakeFetch=async(url,options)=>String(url).includes('cao.go.jp')?new Response(official):(pushes.push(JSON.parse(options.body)),new Response('{}'));
+  env.MONTHLY_FIRST_TARGET_MONTH='2026-12';
+  const prepared=await automation.prepareMonthly('2026-12',new Date('2026-11-02T00:00:00Z'));
+  const event=sqlite.prepare('SELECT * FROM events WHERE slug=?').get(prepared.slug);
+  assert.equal(event.deadline_date,'2026-11-07');assert.equal(event.line_group_id,null);assert.equal(pushes.length,0);
+  // An unlinked page never reaches the configured group.
+  await automation.runMonthly(new Date('2026-11-04T11:00:00Z'));assert.equal(pushes.length,0);
+  sqlite.prepare('UPDATE events SET line_group_id=? WHERE id=?').run(env.MONTHLY_LINE_GROUP_ID,event.id);
+  await automation.runMonthly(new Date('2026-11-04T10:59:59Z'));assert.equal(pushes.length,0);
+  await automation.runMonthly(new Date('2026-11-04T11:00:00Z'));assert.equal(pushes.length,1);assert.match(pushes[0].messages[0].text,/11月7日 18:00/);
+  await automation.runMonthly(new Date('2026-11-06T09:59:59Z'));assert.equal(pushes.length,1);
+  await automation.runMonthly(new Date('2026-11-06T10:00:00Z'));assert.equal(pushes.length,2);
+  await automation.runMonthly(new Date('2026-11-07T08:59:59Z'));assert.equal(pushes.length,2);
+  await automation.runMonthly(new Date('2026-11-07T09:00:00Z'));assert.equal(pushes.length,3);assert.match(pushes[2].messages[0].text,/暫定結果/);
+  await automation.runMonthly(new Date('2026-11-07T09:01:00Z'));assert.equal(pushes.length,3);
+  await automation.runMonthly(new Date('2026-11-15T09:59:59Z'));assert.equal(sqlite.prepare('SELECT count(*) n FROM events').get().n,1);
+  await automation.runMonthly(new Date('2026-11-15T10:00:00Z'));assert.equal(pushes.length,4);assert.equal(sqlite.prepare('SELECT count(*) n FROM events').get().n,2);
+  assert.match(pushes[3].messages[0].text,/11月18日 19:00/);
+  await automation.enqueue(event.id,'final','old-group-result');
+  env.MONTHLY_LINE_GROUP_ID='C'+'b'.repeat(32);
+  await automation.deliverMonthly(new Date('2026-11-16T00:00:00Z'));assert.equal(pushes.length,4);
+});
+
+test('月次保存APIは11月7日18時ちょうどから保存拒否・表示も締切時刻に一致',async()=>{
+  const {sqlite,automation,overrides,clock}=harness();
+  const official=readFileSync(new URL('./fixtures/20261101_official-holidays.csv',import.meta.url),'utf8');
+  fakeFetch=async()=>new Response(official);
+  const prepared=await automation.prepareMonthly('2026-12',new Date('2026-11-02T00:00:00Z'));
+  const person=sqlite.prepare('SELECT * FROM responses ORDER BY created_at LIMIT 1').get();
+  const slot=sqlite.prepare('SELECT id FROM slots LIMIT 1').get();
+  const route=load('app/api/events/[slug]/responses/route.ts',overrides);
+  const request=updatedAt=>new Request('https://example.test',{method:'POST',body:JSON.stringify({name:person.name,comment:'',updatedAt,availability:[{slotId:slot.id,status:'yes'}]})});
+  clock.now=Date.parse('2026-11-07T08:59:59.999Z');
+  const saved=await route.POST(request(person.updated_at),{params:Promise.resolve({slug:prepared.slug})});assert.equal(saved.status,200);
+  const view=(await saved.json()).event;assert.equal(view.monthly.deadlineAt,'2026-11-07T18:00:00+09:00');assert.equal(view.isOpen,true);
+  clock.now=Date.parse('2026-11-07T09:00:00Z');
+  const current=sqlite.prepare('SELECT updated_at FROM responses WHERE id=?').get(person.id);
+  assert.equal((await route.POST(request(current.updated_at),{params:Promise.resolve({slug:prepared.slug})})).status,409);
 });

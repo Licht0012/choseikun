@@ -10,6 +10,7 @@ export interface AppBindings {
   PUBLIC_BASE_URL?: string;
   MONTHLY_LINE_GROUP_ID?: string;
   MONTHLY_ENABLED?: string;
+  MONTHLY_FIRST_TARGET_MONTH?: string;
 }
 
 const schemaStatements = [

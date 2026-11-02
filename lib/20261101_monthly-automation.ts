@@ -1,7 +1,9 @@
 import { getBindings, getDb } from "@/db";
 import { buildPublicEvent, findEventBySlug } from "@/lib/event-data";
 import { digestSecret, randomToken } from "@/lib/security";
-import { MEMBERS, TIMES, HOLIDAY_URL, japanDate, targetMonth, parseHolidays, candidateDates, complete, selectCandidates, resultText } from "./20261101_monthly-rules";
+import { MEMBERS, TIMES, HOLIDAY_URL, targetMonth, parseHolidays, candidateDates, complete, selectCandidates, resultText } from "./20261101_monthly-rules";
+
+import { monthlySchedule, deadlineText } from "./20261102_monthly-schedule";
 
 export async function monthlyError(kind: string, error: unknown, eventId: string | null = null) {
   console.error("Monthly automation", kind, error instanceof Error ? error.message : "failure");
@@ -22,7 +24,8 @@ export async function enqueue(eventId: string, kind: string, text: string) {
     .bind(crypto.randomUUID(), eventId, kind, text, crypto.randomUUID(), new Date().toISOString()).run();
 }
 export async function enqueueFinal(eventId: string, slug: string) {
-  if (!await monthlyInfo(eventId)) return;
+  const info = await monthlyInfo(eventId);
+  if (!info || !monthlySchedule(info.target_month)) return;
   const record = await findEventBySlug(slug);
   if (!record) return;
   const view = await buildPublicEvent(record);
@@ -45,18 +48,21 @@ async function holidaysFor(year: number): Promise<{csv: string; dates: Set<strin
     return {csv: cached.value, dates: parseHolidays(cached.value, year)};
   }
 }
-async function generate(now: Date) {
+export async function prepareMonthly(month: string, now = new Date(), groupId: string | null = null): Promise<{slug:string;adminToken:string | null}> {
+  const schedule = monthlySchedule(month);
+  if (!schedule) throw new Error("対象月を確認してください");
   const db = await getDb();
-  const month = targetMonth(now);
-  if (await db.prepare("SELECT event_id FROM monthly_events WHERE target_month = ?").bind(month).first()) return;
+  const existing = await db.prepare("SELECT e.slug FROM monthly_events m JOIN events e ON e.id=m.event_id WHERE m.target_month=?").bind(month).first<{slug:string}>();
+  if (existing) return {slug:existing.slug,adminToken:null};
   const {csv, dates: holidays} = await holidaysFor(Number(month.slice(0,4)));
   const dates = candidateDates(month, holidays);
   if (!dates.length) throw new Error("候補日がありません");
   const id = crypto.randomUUID(), slug = randomToken(15), stamp = now.toISOString();
-  const createdMonth = japanDate(now).slice(0,7);
+  const createdMonth = schedule.publishAt.slice(0,7);
+  const adminToken = randomToken(32);
   const statements = [db.prepare(`INSERT INTO events
     (id,slug,name,memo,deadline_date,admin_token_hash,line_group_id,reminder_enabled,created_at,updated_at)
-    VALUES (?,?,?,?,?,?,?,?,?,?)`).bind(id,slug,`${month.slice(0,4)}年${month.slice(5)}月の練習日程`, "固定メンバー6人で回答してください。",`${createdMonth}-18`,await digestSecret(randomToken(32)),getBindings().MONTHLY_LINE_GROUP_ID!,0,stamp,stamp),
+    VALUES (?,?,?,?,?,?,?,?,?,?)`).bind(id,slug,`${month.slice(0,4)}年${Number(month.slice(5))}月`, "固定メンバー6人で回答してください。",schedule.deadlineAt.slice(0,10),await digestSecret(adminToken),groupId,0,stamp,stamp),
     db.prepare("INSERT INTO monthly_events(event_id,target_month,created_month,holiday_csv,created_at) VALUES (?,?,?,?,?)").bind(id,month,createdMonth,csv,stamp)];
   const timeIds = TIMES.map(() => crypto.randomUUID());
   TIMES.forEach(([start,end],i) => statements.push(db.prepare("INSERT INTO time_options(id,event_id,start_time,end_time,label,sort_order) VALUES (?,?,?,?,?,?)").bind(timeIds[i],id,start,end,`${start}〜${end}`,i)));
@@ -70,19 +76,25 @@ async function generate(now: Date) {
   try { await db.batch(statements); }
   catch (error) {
     if (!await db.prepare("SELECT event_id FROM monthly_events WHERE target_month = ?").bind(month).first()) throw error;
+    return prepareMonthly(month,now,groupId);
   }
+  return {slug,adminToken};
 }
-interface Pending {id: string; event_id: string; kind: string; payload: string; retry_key: string; first_attempt_at: string | null; attempts: number}
+interface Pending {target_month:string; id: string; event_id: string; kind: string; payload: string; retry_key: string; first_attempt_at: string | null; attempts: number}
 export async function deliverMonthly(now = new Date()) {
   const bindings = getBindings();
   if (bindings.MONTHLY_ENABLED !== "true" || !/^C[0-9a-f]{32}$/.test(bindings.MONTHLY_LINE_GROUP_ID || "") || !bindings.LINE_CHANNEL_ACCESS_TOKEN) return;
   const db = await getDb(), stamp = now.toISOString();
   const left = await db.prepare("SELECT value FROM monthly_settings WHERE key = 'group_left'").first<{value: string}>();
   if (left?.value === bindings.MONTHLY_LINE_GROUP_ID) return;
-  const pending = await db.prepare(`SELECT * FROM monthly_notifications WHERE sent_at IS NULL AND blocked = 0
-    AND (next_attempt_at IS NULL OR next_attempt_at <= ?) AND (lease_until IS NULL OR lease_until < ?) ORDER BY created_at LIMIT 12`)
-    .bind(stamp,stamp).all<Pending>();
+  const pending = await db.prepare(`SELECT n.*,m.target_month FROM monthly_notifications n
+    JOIN monthly_events m ON m.event_id=n.event_id JOIN events e ON e.id=n.event_id
+    WHERE e.line_group_id=? AND n.sent_at IS NULL AND n.blocked=0
+    AND (n.next_attempt_at IS NULL OR n.next_attempt_at<=?) AND (n.lease_until IS NULL OR n.lease_until<?)
+    ORDER BY CASE n.kind WHEN 'created' THEN 0 ELSE 1 END,n.created_at,n.rowid LIMIT 12`).bind(bindings.MONTHLY_LINE_GROUP_ID,stamp,stamp).all<Pending>();
   for (const item of pending.results) {
+    const schedule = monthlySchedule(item.target_month);
+    if (!schedule || now.getTime() < Date.parse(schedule.publishAt)) continue;
     // Stop before LINE's 24-hour deduplication guarantee expires. Never change retry keys.
     if (item.first_attempt_at && now.getTime()-Date.parse(item.first_attempt_at) >= 23*3600000) {
       await db.prepare("UPDATE monthly_notifications SET blocked = 1 WHERE id = ?").bind(item.id).run();
@@ -98,7 +110,7 @@ export async function deliverMonthly(now = new Date()) {
         const page = await db.prepare("SELECT slug FROM events WHERE id=?").bind(item.event_id).first<{slug:string}>();
         const record = page && await findEventBySlug(page.slug);
         const view = record && await buildPublicEvent(record);
-        if ((view && complete(view.slots,view.responses)) || japanDate(now).slice(8,16) >= "18T00:00") {
+        if ((view && complete(view.slots,view.responses)) || now.getTime() >= Date.parse(schedule.deadlineAt)) {
           await db.prepare("UPDATE monthly_notifications SET blocked=1,lease_until=NULL WHERE id=? AND lease_owner=?").bind(item.id,owner).run(); continue;
         }
       }
@@ -128,26 +140,34 @@ export async function runMonthly(now = new Date()) {
   if (!/^C[0-9a-f]{32}$/.test(bindings.MONTHLY_LINE_GROUP_ID || "") || !/^https:\/\//.test(bindings.PUBLIC_BASE_URL || "")) {
     await monthlyError("configuration","MONTHLY_LINE_GROUP_ID / PUBLIC_BASE_URL を確認してください"); return;
   }
-  const local = japanDate(now), month = local.slice(0,7), dayTime = local.slice(8,16);
   try {
-    if (dayTime >= "15T19:00") {
-      try { await generate(now); } catch (error) { await monthlyError("generation",error); }
+    const months = new Set([targetMonth(now)]);
+    if (bindings.MONTHLY_FIRST_TARGET_MONTH) months.add(bindings.MONTHLY_FIRST_TARGET_MONTH);
+    for (const month of months) {
+      const schedule = monthlySchedule(month);
+      if (schedule && now.getTime() >= Date.parse(schedule.publishAt) && now.getTime() < Date.parse(schedule.deadlineAt)) {
+        try { await prepareMonthly(month,now,bindings.MONTHLY_LINE_GROUP_ID!); }
+        catch (error) { await monthlyError("generation",error); }
+      }
     }
     const db = await getDb();
-    const pages = await db.prepare("SELECT m.*,e.slug FROM monthly_events m JOIN events e ON e.id=m.event_id WHERE m.created_month = ? ORDER BY m.created_at DESC")
-      .bind(month).all<{event_id:string;target_month:string;created_month:string;slug:string}>();
+    const pages = await db.prepare("SELECT m.*,e.slug FROM monthly_events m JOIN events e ON e.id=m.event_id WHERE e.line_group_id=? ORDER BY m.created_at")
+      .bind(bindings.MONTHLY_LINE_GROUP_ID).all<{event_id:string;target_month:string;created_month:string;slug:string}>();
     for (const page of pages.results) {
+      const schedule = monthlySchedule(page.target_month);
+      if (!schedule || now.getTime() < Date.parse(schedule.publishAt)) continue;
       const record = await findEventBySlug(page.slug);
       if (!record) continue;
       const view = await buildPublicEvent(record), done = complete(view.slots,view.responses);
       const url = `${bindings.PUBLIC_BASE_URL!.replace(/\/$/,"")}/e/${page.slug}`;
       const label = `${page.target_month.slice(0,4)}年${page.target_month.slice(5)}月`;
-      const sentCreated = await db.prepare("SELECT id FROM monthly_notifications WHERE event_id=? AND kind='created'").bind(page.event_id).first();
-      if (!sentCreated) await enqueue(page.event_id,"created",`【調整くん】\n\n${label}の練習日程調整をお願いします！\n\n以下のURLから、参加できる日時を○△×で入力してください。\n\n【日程調整ページ】\n${url}\n\n【回答期限】\n${page.created_month.slice(5)}月18日 23:59まで\n\n全員の回答が揃い次第、候補日をお知らせします。`);
+      const deadline = deadlineText(schedule);
+      await enqueue(page.event_id,"created",`【調整くん】\n\n${label}の練習日程調整をお願いします！\n\n以下のURLから、参加できる日時を○△×で入力してください。\n\n【日程調整ページ】\n${url}\n\n【回答期限】\n${deadline}まで\n\n全員の回答が揃い次第、候補日をお知らせします。`);
       if (done) await enqueue(page.event_id,"final",resultText(selectCandidates(view.slots,view.responses)));
-      if (page.created_month !== month) continue;
-      if (!done && dayTime >= "17T19:00" && dayTime < "18T00:00") await enqueue(page.event_id,"reminder",`【調整くん】\n\n${label}の練習日程について、まだ全員の回答が揃っていません。\n\n回答期限は明日（18日）23:59です！\n\n未回答の方は、以下から入力をお願いします。\n\n${url}`);
-      if (!done && dayTime >= "18T23:59") await enqueue(page.event_id,"provisional",resultText(selectCandidates(view.slots,view.responses),true));
+      if (!done && now.getTime() >= Date.parse(schedule.reminderAt) && now.getTime() < Date.parse(schedule.deadlineAt)) {
+        await enqueue(page.event_id,"reminder",`【調整くん】\n\n${label}の練習日程について、まだ全員の回答が揃っていません。\n\n回答期限は${deadline}です！\n\n未回答の方は、以下から入力をお願いします。\n\n${url}`);
+      }
+      if (!done && now.getTime() >= Date.parse(schedule.deadlineAt)) await enqueue(page.event_id,"provisional",resultText(selectCandidates(view.slots,view.responses),true));
     }
   } catch (error) { await monthlyError("scheduled",error); }
   await deliverMonthly(now);
