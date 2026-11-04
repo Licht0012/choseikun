@@ -47,9 +47,31 @@ test('B:全指定ケース、○数・△数による並び順、件数制限な
 test('C/D/E:候補なし、同点時系列、未入力は票にしない・暫定表示',()=>{
   const slots=makeSlots(2),r=responses([['yes','yes','yes'],['yes','yes','yes']]);
   assert.equal(rules.selectCandidates(slots,r).length,0);assert.equal(rules.complete(slots,r),false);
-  assert.match(rules.resultText([],true),/暫定結果/);assert.match(rules.resultText([],true),/候補日時がありません/);
-  assert.match(rules.resultText([]),/全員の回答が揃いましたが/);
+  assert.match(rules.resultText([],[],true),/暫定結果/);assert.match(rules.resultText([],[],true),/候補日時がありません/);
+  assert.match(rules.resultText([],[]),/全員の回答が揃いましたが/);
   assert.equal(rules.slotLabel({...slots[0],date:'2027-01-09'}),'01/09(土)10:00〜12:00');
+});
+test('候補通知は日時ごとの○△×と未回答者を固定順で表示する',()=>{
+  const slots=makeSlots(2);
+  const people=responses([['yes','maybe','no','yes','maybe','no'],['maybe','yes',undefined,'no','yes','yes']]);
+  const text=rules.resultText(slots,people,true);
+  assert.match(text,/○：りえこ、まさよし\n△：しほ、奏\n×：長官、おーじ/);
+  assert.match(text,/○：しほ、奏、おーじ\n△：りえこ\n×：まさよし\n未回答：長官/);
+  const unanimous=rules.resultText(slots.slice(0,1),responses([Array(6).fill('yes')]));
+  assert.match(unanimous,/○：りえこ、しほ、長官、まさよし、奏、おーじ\n△：なし\n×：なし/);
+  assert.doesNotMatch(unanimous,/未回答/);
+});
+test('最大93候補の通知を欠落なくLINE上限内へ分割する',()=>{
+  const slots=Array.from({length:93},(_,i)=>({...makeSlots(1)[0],id:String(i),date:`2027-03-${String(Math.floor(i/3)+1).padStart(2,'0')}`,startTime:rules.TIMES[i%3][0],endTime:rules.TIMES[i%3][1]}));
+  const people=responses(Array.from({length:93},()=>Array(6).fill('yes')));
+  const text=rules.resultText(slots,people);
+  const messages=rules.lineTextMessages(text);
+  assert(messages.length>1 && messages.length<=5);
+  assert(messages.every(m=>m.type==='text' && m.text.length<=5000));
+  assert.equal(messages.map(m=>m.text).join(''),text);
+  assert.equal(rules.lineTextMessages('a'.repeat(5000)).length,1);
+  assert.equal(rules.lineTextMessages('a'.repeat(4999)+'🙇').map(m=>m.text).join(''),'a'.repeat(4999)+'🙇');
+  assert.throws(()=>rules.lineTextMessages('a'.repeat(25001)));
 });
 test('未確定の将来祝日と壊れたCSVを拒否',()=>{
   assert.throws(()=>rules.parseHolidays('2026/1/1,元日',2027));
@@ -108,12 +130,34 @@ test('D1統合:途中保存・競合拒否・コメント・不正入力・正�
   assert.equal((await saveMonthlyResponse(event,body(people[0]))).status,409);
   for(const person of people){const latest=sqlite.prepare('SELECT * FROM responses WHERE id=?').get(person.id);assert.equal((await saveMonthlyResponse(event,body(latest))).status,200);}
   assert.equal(sqlite.prepare("SELECT count(*) n FROM monthly_notifications WHERE kind='final'").get().n,1);
+  assert.match(sqlite.prepare("SELECT payload FROM monthly_notifications WHERE kind='final'").get().payload,/○：りえこ、しほ、長官、まさよし、奏、おーじ\n△：なし\n×：なし/);
   const first=sqlite.prepare('SELECT * FROM responses WHERE id=?').get(people[0].id);
   assert.equal(first.comment,'<script>alert(1)</script>');
   assert.equal((await saveMonthlyResponse(event,{...body(first),comment:'a'.repeat(301)})).status,400);
   assert.equal((await saveMonthlyResponse(event,{...body(first),availability:[{slotId:'foreign',status:'yes'}]})).status,400);
   assert.equal((await saveMonthlyResponse(event,body(first))).status,200);
   assert.equal(pushes,2);
+});
+
+test('D1統合:長文の分割送信は同じ本文・再試行キーで再試行する',async()=>{
+  const {sqlite,automation}=harness();
+  fakeFetch=async(url)=>String(url).includes('cao.go.jp')?new Response(holidayCsv):new Response('{}');
+  await automation.runMonthly(new Date('2026-11-15T10:00:00Z'));
+  const eventId=sqlite.prepare('SELECT id FROM events').get().id;
+  const payload=('・01/09(土)10:00〜12:00\n○：りえこ、しほ、長官、まさよし、奏、おーじ\n△：なし\n×：なし\n\n').repeat(93);
+  await automation.enqueue(eventId,'final',payload);
+  const requests=[];
+  fakeFetch=async(_url,options)=>{requests.push(options);return new Response('{}',{status:requests.length===1?500:200});};
+  await automation.deliverMonthly(new Date('2026-11-16T00:00:00Z'));
+  await automation.deliverMonthly(new Date('2026-11-16T00:02:00Z'));
+  assert.equal(requests.length,2);
+  assert.equal(requests[0].body,requests[1].body);
+  assert.equal(requests[0].headers['X-Line-Retry-Key'],requests[1].headers['X-Line-Retry-Key']);
+  const messages=JSON.parse(requests[1].body).messages;
+  assert(messages.length>1 && messages.length<=5);
+  assert(messages.every(m=>m.text.length<=5000));
+  assert.equal(messages.map(m=>m.text).join(''),payload);
+  assert(sqlite.prepare("SELECT sent_at FROM monthly_notifications WHERE kind='final'").get().sent_at);
 });
 
 test('公式CSV実データ:振替休日・国民の休日・未確定年拒否',()=>{

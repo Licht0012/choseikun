@@ -56,8 +56,33 @@ export function selectCandidates(slots: SlotView[], responses: ResponseView[]): 
 export function slotLabel(slot: SlotView): string {
   return `${slot.date.slice(5).replace("-", "/")}(${"日月火水木金土"[new Date(`${slot.date}T00:00:00Z`).getUTCDay()]})${slot.startTime}〜${slot.endTime}`;
 }
-export function resultText(slots: SlotView[], provisional = false): string {
-  const list = slots.map(s => `・${slotLabel(s)}`).join("\n");
+export function resultText(slots: SlotView[], responses: ResponseView[], provisional = false): string {
+  const list = slots.map(slot => {
+    const groups: Record<string, string[]> = { yes: [], maybe: [], no: [], unanswered: [] };
+    for (const name of MEMBERS) {
+      const status = responses.find(response => response.name === name)?.availability[slot.id];
+      groups[status === "yes" || status === "maybe" || status === "no" ? status : "unanswered"].push(name);
+    }
+    const lines = [`・${slotLabel(slot)}`, `○：${groups.yes.join("、") || "なし"}`, `△：${groups.maybe.join("、") || "なし"}`, `×：${groups.no.join("、") || "なし"}`];
+    if (groups.unanswered.length) lines.push(`未回答：${groups.unanswered.join("、")}`);
+    return lines.join("\n");
+  }).join("\n\n");
   if (provisional) return `【調整くん】\n\n回答期限になりましたが、まだ全員の回答が揃っていません。\n\n現在の回答による候補日時は以下です。\n\n${list || "条件を満たす候補日時がありませんでした。"}\n\n※未回答者がいるため暫定結果です。`;
   return list ? `しほさん\n候補日は\n${list}\nです。\nスタジオの予約をお願いします🙇` : "【調整くん】\n\n全員の回答が揃いましたが、条件を満たす候補日時がありませんでした。\n\n回答内容を確認してください。";
+}
+
+export function lineTextMessages(text: string): { type: "text"; text: string }[] {
+  const messages: { type: "text"; text: string }[] = [];
+  let remaining = text;
+  while (remaining.length > 5000) {
+    const boundary = remaining.lastIndexOf("\n\n", 5000);
+    let end = boundary > 0 ? boundary : 5000;
+    // Do not split a UTF-16 surrogate pair at the fallback boundary.
+    if (/[\uD800-\uDBFF]/.test(remaining[end - 1])) end--;
+    messages.push({ type: "text", text: remaining.slice(0, end) });
+    remaining = remaining.slice(end);
+  }
+  if (remaining) messages.push({ type: "text", text: remaining });
+  if (!messages.length || messages.length > 5) throw new Error("LINE本文が送信上限を超えています");
+  return messages;
 }

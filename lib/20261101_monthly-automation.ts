@@ -1,7 +1,7 @@
 import { getBindings, getDb } from "@/db";
 import { buildPublicEvent, findEventBySlug } from "@/lib/event-data";
 import { digestSecret, randomToken } from "@/lib/security";
-import { MEMBERS, TIMES, HOLIDAY_URL, targetMonth, parseHolidays, candidateDates, complete, selectCandidates, resultText } from "./20261101_monthly-rules";
+import { MEMBERS, TIMES, HOLIDAY_URL, targetMonth, parseHolidays, candidateDates, complete, selectCandidates, resultText, lineTextMessages } from "./20261101_monthly-rules";
 
 import { monthlySchedule, deadlineText } from "./20261102_monthly-schedule";
 
@@ -17,8 +17,7 @@ export async function monthlyInfo(eventId: string) {
 }
 export async function enqueue(eventId: string, kind: string, text: string) {
   const db = await getDb();
-  // Every possible monthly result fits in one LINE text (maximum 31 days × 3 slots).
-  if (text.length > 5000) throw new Error("LINE本文が上限を超えています");
+  lineTextMessages(text);
   await db.prepare(`INSERT OR IGNORE INTO monthly_notifications
     (id,event_id,kind,payload,retry_key,created_at) VALUES (?,?,?,?,?,?)`)
     .bind(crypto.randomUUID(), eventId, kind, text, crypto.randomUUID(), new Date().toISOString()).run();
@@ -29,7 +28,7 @@ export async function enqueueFinal(eventId: string, slug: string) {
   const record = await findEventBySlug(slug);
   if (!record) return;
   const view = await buildPublicEvent(record);
-  if (complete(view.slots, view.responses)) await enqueue(eventId, "final", resultText(selectCandidates(view.slots, view.responses)));
+  if (complete(view.slots, view.responses)) await enqueue(eventId, "final", resultText(selectCandidates(view.slots, view.responses), view.responses));
 }
 async function holidaysFor(year: number): Promise<{csv: string; dates: Set<string>}> {
   const db = await getDb();
@@ -121,7 +120,7 @@ export async function deliverMonthly(now = new Date()) {
       const response = await fetch("https://api.line.me/v2/bot/message/push", {
         method:"POST", signal: AbortSignal.timeout(20000),
         headers:{"content-type":"application/json",authorization:`Bearer ${bindings.LINE_CHANNEL_ACCESS_TOKEN}`,"X-Line-Retry-Key":item.retry_key},
-        body:JSON.stringify({to:bindings.MONTHLY_LINE_GROUP_ID,messages:[{type:"text",text:item.payload}]}),
+        body:JSON.stringify({to:bindings.MONTHLY_LINE_GROUP_ID,messages:lineTextMessages(item.payload)}),
       });
       if (response.ok || (response.status === 409 && response.headers.has("x-line-accepted-request-id"))) {
         await db.prepare("UPDATE monthly_notifications SET sent_at=?,lease_until=NULL WHERE id=? AND lease_owner=?").bind(new Date().toISOString(),item.id,owner).run();
@@ -163,11 +162,11 @@ export async function runMonthly(now = new Date()) {
       const label = `${page.target_month.slice(0,4)}年${page.target_month.slice(5)}月`;
       const deadline = deadlineText(schedule);
       await enqueue(page.event_id,"created",`【調整くん】\n\n${label}の練習日程調整をお願いします！\n\n以下のURLから、参加できる日時を○△×で入力してください。\n\n【日程調整ページ】\n${url}\n\n【回答期限】\n${deadline}まで\n\n全員の回答が揃い次第、候補日をお知らせします。`);
-      if (done) await enqueue(page.event_id,"final",resultText(selectCandidates(view.slots,view.responses)));
+      if (done) await enqueue(page.event_id,"final",resultText(selectCandidates(view.slots,view.responses),view.responses));
       if (!done && now.getTime() >= Date.parse(schedule.reminderAt) && now.getTime() < Date.parse(schedule.deadlineAt)) {
         await enqueue(page.event_id,"reminder",`【調整くん】\n\n${label}の練習日程について、まだ全員の回答が揃っていません。\n\n回答期限は${deadline}です！\n\n未回答の方は、以下から入力をお願いします。\n\n${url}`);
       }
-      if (!done && now.getTime() >= Date.parse(schedule.deadlineAt)) await enqueue(page.event_id,"provisional",resultText(selectCandidates(view.slots,view.responses),true));
+      if (!done && now.getTime() >= Date.parse(schedule.deadlineAt)) await enqueue(page.event_id,"provisional",resultText(selectCandidates(view.slots,view.responses),view.responses,true));
     }
   } catch (error) { await monthlyError("scheduled",error); }
   await deliverMonthly(now);
